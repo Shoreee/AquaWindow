@@ -1,12 +1,19 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./packages/wm-kernel" },
-    { "path": "./packages/fluid-field" },
-    { "path": "./packages/agent-sdk" },
-    { "path": "./packages/study" },
-    { "path": "./packages/apps" },
-    { "path": "./packages/ui-shell" },
-    { "path": "./apps/web" }
-  ]
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "vite.config.ts"]
 }

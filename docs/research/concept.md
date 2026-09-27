@@ -1,113 +1,50 @@
-# Concept: Negotiable Boundaries / Fluid Territories
+# 概念：可谈判的边界
 
-## One-sentence claim
+## 定位
 
-In an agent-populated desktop, the window *border* should be a continuously negotiable medium — fluid enough to fuse, compress, and recede, but regular enough (superellipse, not freeform blob) that users keep a spatial model and remain in control.
+AquaWindow 是一个**实验前端**。被试（或研究者自己）面对的是一台可信的电脑：能打开、移动、缩放、聚焦、遮挡、切换、最小化和恢复多个窗口，窗口里是论文、网页、聊天、文件、视频、画布和终端。测量发生在这些真实操作上，而不是在一张抽象的布局问卷上。
 
-## Why "fluid" and not "fully organic"
+核心对象不是「窗口矩形」，而是**领地**。领地有边界、有内部要紧的区域、有和其他领地的关系、还有一个深度。人和 agent 谈判的是这块领地让出多少、和谁连在一起、退到多深，而不是谁算出了一个全局最优的矩形排列。
 
-Reviewers will attack irregularity: unreadable text, lost Fitts targets, broken spatial memory. AquaWindow therefore commits to **controlled fluidity**:
+这把三件通常拆开的事放回同一个界面里：
 
-- Each window is a **superellipse** (Lamé curve) SDF, not a metaball cloud.
-- Content lives in a **rigid rectangular core**. The skin deforms; glyphs do not.
-- Fusion uses a *bounded* polynomial smooth-min so two windows become a peanut / pool, not an amoeba.
-- Compression is a spring, not a morph: neighbors lose width/height first, then (only past a pressure threshold) may overlap.
+- 几何：边界是连续的（超椭圆的距离场、平滑并集），所以「让一点」不必等于「整窗缩小」或「切走一块」。
+- 注意力：每扇窗声明自己的重要区域（正在写的段落、表格、说话的人、这一步要点的控件）。合成和 agent 都读这份声明。
+- 协商：agent 的输出是带理由的提案。自主度决定提案停在提示、预览还是先做后撤。拒绝会被记下来，同一类提案会变安静。
 
-## Primitives
+## 研究问题
 
-### Rigid Core, Soft Skin
+**RQ1 形状。** 在内容需要保持可读比例的前提下，连续的边界退让是否优于等比缩放？
 
-```
-┌─────────────────────────────┐  ← soft skin (SDF field, WebGL)
-│  ┌───────────────────────┐  │
-│  │   readable DOM core   │  │  ← clip-path follows skin but
-│  │   (never warped)      │  │     content transform is identity
-│  └───────────────────────┘  │
-└─────────────────────────────┘
-```
+桌面上的对照是同一场景的两档：`yield = deform` 与 `yield = scale`。前者沿接触处凹进，内容不缩放；后者把整窗缩进剩余的矩形里。退让有一条明确的失败线：如果重叠已经超过窗口面积的大约一半，或退让后剩下的可见比例太低，就不再挖，以免出现「数学上避开了重叠、看起来像一条缝」的形状。那种情况交给叠放和 agent。
 
-This is the readability defense.
+**RQ2 Agent。** 相对纯几何优化和手写规则，一个知道「人在干什么」的 agent 增加了什么？
 
-### Fusion as Grouping
+Layout Lab 把这个差距摆在明面上。两个求解器共用搜索过程。只优化重叠和屏幕利用率的那一个，会移动很远、改掉长宽比、对调左右顺序。加上先验（刚用过的不动、少移动、保持比例和顺序、参考材料靠近主任务、盖住重要区域要付出高代价）之后，strangeness 下降。规则层进一步使用行为：来回点击的节奏、教程步骤、会议字幕里的点名、文件名搜索失败但标题对得上。这些都不是矩形能告诉你的。
 
-Windows that share `semanticTags` and come within a fusion radius blend via `smin`. The fused set gets a `groupId`. Dragging one member moves the pool. Pulling beyond a split distance tears the group — a water-drop metaphor users already know.
+所以 agent 的优势不被表述成「更会摆矩形」，而被表述成：它可以用语义和行为把一个欠指定的几何问题收成一个人认得出的小改动，并且把改动交给人决定。
 
-### Compression over Occlusion
+**RQ3 深度。** z 能不能成为交互的一维，而不只是叠放顺序的副作用？
 
-When A grows into B:
+操作是推远、拉近、按住空格看穿、以及把一次探索收成由近及远的轨迹。最小化仍然存在，但它是把窗口拿走；深度是把它留在原地、降低保真度。轨迹用来回答「页面越开越多」：新页面到前面来，旧页面沿 z 后退，而不是变成一排标签或一叠几乎重合的矩形。
 
-1. Compute contact pressure from SDF overlap.
-2. If B is not pinned, shrink B along the contact axis (respecting `minSize`).
-3. Visualize residual pressure on the field layer.
-4. Only if pressure exceeds `overlapThreshold` may A occlude B.
+## 和已有工作的关系
 
-Occlusion is no longer the *default* of the overlapping paradigm; it is a last resort.
+这里只标明 demo 里每一项技术接的是哪条线，方便写相关工作，不代替文献综述。
 
-### Human–Agent Territoriality
+| 桌面上的技术 | 承接 |
+| --- | --- |
+| 掀角，松手弹回 | Beaudouin-Lafon, UIST 2001，overlapping windows 的 peeling |
+| 重要区域从遮挡物中透出 | Importance-Driven Compositing Window Management, CHI 2011 |
+| 非矩形、随关注变化的工作区 | Interactive Visual Workspaces with Dynamic Foveal Areas and Adaptive Composite Interfaces, CGF / Eurographics 2007 |
+| 按区域自适应，而不是全局重排 | DuoZone 一类 adaptive layout |
+| 离开焦点但仍在周边 | Scalable Fabric；Task Gallery 的 2.5D |
+| 优化器会排出人不能用的界面 | SUPPLE 传统里「最优 ≠ 可接受」的教训；本项目用 strangeness 把它显式化 |
+| 提议、预览、廉价撤销、从拒绝里变安静 | Horvitz, CHI 1999 的 mixed-initiative；Amershi 等人的人机协作准则 |
+| 看穿遮挡而不重排 | free-space / 透明叠加一层的思路（幽灵视频：点击穿透） |
 
-Borrowed from Scott et al. (CSCW 2004) tabletop territories:
+Demo 故意不把这些收成一个「最好的窗口管理器」。场景方案 A 通常就是今天的桌面，后面的字母才逐项打开技术，最后一档才打开 agent。比较的单位是「同一问题、不同设计」，不是单一条件的前后测。
 
-| State | Visual | Who may move it |
-| --- | --- | --- |
-| Ice (`pinned`) | Crystalline rim, no fusion | User only |
-| Water (default) | Soft skin | User + agent proposals |
-| Ghost | Translucent liquid preview | Not yet real |
+## 什么不在这个系统里
 
-The agent is forbidden from proposing commands against ice.
-
-### Proposal as Liquid Ghost
-
-Agents never mutate the store. They emit a `LayoutProposal` (a list of kernel commands + rationale + confidence). The shell renders it as a liquid ghost. The user may:
-
-- **Accept all**
-- **Accept some** (drag a ghost into reality; discard the rest)
-- **Reject**
-- **Undo** later via the timeline (including auto-applied proposals)
-
-This is feedforward (Horvitz) made spatial.
-
-### Stability Budget
-
-Agent-induced centroid travel (sum of Euclidean moves, plus area change) is capped per time window. This is both a *hard constraint* inside `RulePolicy` and a *dependent measure* in the study. It protects spatial memory (cf. Data Mountain).
-
-### Depth as Attention (xyz, phase 1 = 2.5D)
-
-`z` in the kernel is stacking order (who receives clicks).
-`depth` is *attention*: 0 = working set, 1 = periphery, 2 = archived-but-visible.
-
-Receding a window scales it toward the vanishing point, desaturates, and blurs — it is *not* minimized and *not* occluded. Parallax peek (pointer-driven) lets the user glance without committing a raise. A future 3D camera mode is a study *probe condition*, not the default.
-
-## Mixed-initiative contract
-
-```
-user action ──► kernel command ──► event bus
-                                      │
-                                      ▼
-                                 Observation
-                                      │
-                                      ▼
-                         Policy (rules now, VLM later)
-                                      │
-                                      ▼
-                              LayoutProposal
-                                      │
-                          ┌───────────┴────────────┐
-                          ▼                        ▼
-                     GhostLayer              auto-with-undo
-                          │                        │
-                     user decision                 │
-                          └──────────► kernel ◄────┘
-```
-
-Autonomy dial: `off | suggest | preview | auto-with-undo`.
-Default for studies is `preview` — the conservative mixed-initiative setting.
-
-## What the five scenarios stress
-
-| Scenario | Pain | Primitive exercised |
-| --- | --- | --- |
-| Files | Drop target hidden | Compression + fusion-as-transport-pool |
-| Papers | Citation + notes steal space | Droplet peek + compress/rebound |
-| Meeting | Speaker vs shared canvas vs notes | Tension links + ice on shared region |
-| Tutorial | Instruction occludes the tool | Adsorption + recede-to-depth |
-| Design | Reference wall vs canvas | Peripheral clusters + peek |
+内核不做像素级的真实应用托管，五个场景的内容是模拟的。论文条目是虚构的，避免把 demo 误当成文献。LLM 适配器只定义协议和校验，默认的策略是可解释的规则，这样没有密钥也能完整跑通，也避免在基线都不透明的情况下声称模型更懂布局。
