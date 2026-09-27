@@ -1,0 +1,11 @@
+{
+  "id": "files",
+  "title": "File management",
+  "goal": "Move CHI-draft.pdf into Submission/ while another window covers the folder.",
+  "steps": [
+    "Open Finder — Desktop and Finder — Submission.",
+    "Locate CHI-draft.pdf on the Desktop.",
+    "Drop it into Submission/ even if the folder is covered.",
+    "Confirm the file appears in Submission."
+  ]
+}

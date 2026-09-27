@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/wm-kernel" },
+    { "path": "./packages/fluid-field" },
+    { "path": "./packages/agent-sdk" },
+    { "path": "./packages/study" },
+    { "path": "./packages/apps" },
+    { "path": "./packages/ui-shell" },
+    { "path": "./apps/web" }
+  ]
+}
