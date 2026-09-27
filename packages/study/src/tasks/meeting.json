@@ -1,0 +1,11 @@
+{
+  "id": "meeting",
+  "title": "Tencent Meeting",
+  "goal": "Pin the shared canvas, keep the current speaker visible, fuse minutes.",
+  "steps": [
+    "Join the mock meeting.",
+    "Share the slide canvas and pin it (ice).",
+    "Watch the speaker tile dock beside the share.",
+    "Confirm minutes fuse with the meeting pool."
+  ]
+}

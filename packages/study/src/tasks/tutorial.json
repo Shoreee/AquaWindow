@@ -1,0 +1,11 @@
+{
+  "id": "tutorial",
+  "title": "Software learning",
+  "goal": "Complete four editor steps without the guide covering the target control.",
+  "steps": [
+    "Open AquaDraw tutorial + the mock editor.",
+    "Follow step 1–4: new layer, brush, color, export.",
+    "When you act, the guide should recede into depth.",
+    "Export the drawing."
+  ]
+}

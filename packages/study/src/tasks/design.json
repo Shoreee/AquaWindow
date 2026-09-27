@@ -1,0 +1,11 @@
+{
+  "id": "design",
+  "title": "Design reference",
+  "goal": "Keep three references visible while painting on the canvas.",
+  "steps": [
+    "Open Moodboard and Canvas.",
+    "Cluster the three references to the periphery.",
+    "Hover-peek a reference without covering the canvas.",
+    "Place two strokes that echo a reference color."
+  ]
+}
