@@ -81,6 +81,8 @@ src/study        JSONL 日志
 
 ## 运行
 
+线上演示：<https://shoreee.github.io/AquaWindow/>
+
 需要 Node 20+ 和 pnpm。
 
 ```bash
