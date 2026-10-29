@@ -17,6 +17,12 @@ describe('transparent reveal contours',()=>{
   const top=coordinates.filter(q=>q[0]>190&&q[0]<360&&q[1]<190);
   expect(top.length).toBeGreaterThan(8);expect(Math.max(...top.map(q=>q[1]))-Math.min(...top.map(q=>q[1]))).toBeLessThan(8);
  });
+ it('opens an edge reveal through the outside corner instead of rounding it into an enclosed hole',()=>{
+  const geometry=revealContour({view:{...view,revealMode:'edge'},width:550,height:600,progress:1},.5);
+  const coordinates=[...geometry.path.matchAll(/[ML]([\d.-]+) ([\d.-]+)/g)].map(m=>[Number(m[1]),Number(m[2])]);
+  expect(coordinates.some(q=>q[0]>550&&q[1]<0)).toBe(true);
+  expect(geometry.rh).toBeLessThan(600/2);expect(geometry.rimPath.endsWith('Z')).toBe(false);
+ });
  it('moves the dragged boundary while preserving the opposite edge of a central opening',()=>{
   const base={view,width:550,height:600,progress:1};
   const before=revealContour(base,0),after=revealContour({...base,closure:{edge:'left',amount:.5}},0);

@@ -17,10 +17,10 @@ try{
   await page.waitForFunction(id=>!window.__aw.kernel.get(id).props.agentMotion,id);await page.keyboard.press('Escape');
   assert.deepEqual(await page.evaluate(id=>window.__aw.kernel.get(id).rect,id),base);
  }
- // The membrane must start spreading before the carried page moves.
+ // Direct dragging is immediate; the slower membrane grows concurrently.
  const downBox=await root.boundingBox(),title=await root.locator('.aw-title').boundingBox();await page.mouse.move(title.x+150,title.y+20);await page.mouse.down();await page.mouse.move(title.x+280,title.y+70);
  await page.waitForFunction(id=>{const w=window.__aw.kernel.get(id);return w.props.agentMotion?.transport.coverage>.08&&w.props.agentMotion.transport.coverage<.65;},id);
- assert.ok(Math.abs((await page.evaluate(id=>window.__aw.kernel.get(id).rect,id)).x-base.x)<2);
+ assert.ok(Math.abs((await page.evaluate(id=>window.__aw.kernel.get(id).rect,id)).x-base.x-130)<2,'Direct dragging must immediately follow the pointer, without waiting for the membrane');
  assert.equal(await root.locator('[data-transport-stage=engulf]').count(),1);
  const origin=await page.evaluate(id=>window.__aw.kernel.get(id).props.agentMotion.transport.origin,id);assert.ok(Math.abs(origin[0]-(title.x+150-downBox.x)/downBox.width)<.02&&Math.abs(origin[1]-(title.y+20-downBox.y)/downBox.height)<.02,'Manual wrapping begins at the pointer-down location');await page.screenshot({path:'screenshots/qa/wrap-spreading.png'});
  await page.waitForFunction(({id,x})=>window.__aw.kernel.get(id).rect.x>x+120,{id,x:base.x});await page.mouse.up();

@@ -139,7 +139,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     const cap0 = { ...rect };
     cancelCapsuleMotion();cancelManualWindowMotion();
     kernel.beginGesture('move');
-    const material=!capsule?beginWindowMotion(starts.map(s=>s.id),'move',{x:e.clientX,y:e.clientY}):null;
+    const material=!capsule?beginWindowMotion(starts.map(s=>s.id),'move',{x:e.clientX,y:e.clientY},true):null;
     ui.set({ activeId: win.id });
     let snap: Rect | null = null;
     const move = (ev: PointerEvent) => {
@@ -181,7 +181,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     const minH = win.appId === 'refimage' || win.appId === 'tile' ? 90 : 170;
     cancelCapsuleMotion();cancelManualWindowMotion();
     kernel.beginGesture('resize');
-    const material=beginWindowMotion([win.id],'resize',{x:e.clientX,y:e.clientY});
+    const material=beginWindowMotion([win.id],'resize',{x:e.clientX,y:e.clientY},true);
     ui.set({ activeId: win.id });
     const move = (ev: PointerEvent) => {
       if(material?.stopped)return;

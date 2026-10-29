@@ -24,6 +24,10 @@ try{
  await page.keyboard.press('Escape');await page.waitForTimeout(60);assert.ok((await host.evaluate(e=>getComputedStyle(e).clipPath)).includes('evenodd'));
  await page.keyboard.press('Escape');
  await page.mouse.move(1390,790);await page.keyboard.down('Space');await page.waitForFunction(()=>window.__aw.adaptation.store.get().phase==='cycling');await page.keyboard.press('ArrowRight');await page.keyboard.up('Space');await page.waitForFunction(()=>window.__aw.adaptation.store.get().phase==='idle');
- assert.equal(await page.locator('[data-reveal-mode=edge]').count(),1);assert.equal(await page.locator('[data-agent-result]').count(),0);assert.deepEqual(errors,[]);
+ assert.equal(await page.locator('[data-reveal-mode=edge]').count(),1);
+ const edgeWindow=page.locator('[data-reveal-mode=edge]').locator('..').locator('..'),cornerBox=await edgeWindow.boundingBox();
+ const cutAtCorner=await page.evaluate(({x,y})=>!document.elementFromPoint(x,y)?.closest('.aw-body'),{x:cornerBox.x+cornerBox.width-25,y:cornerBox.y+12});assert.ok(cutAtCorner,'Edge reveal must open the actual outside corner');
+ await page.screenshot({path:'screenshots/qa/reveal-corner.png'});
+assert.equal(await page.locator('[data-agent-result]').count(),0);assert.deepEqual(errors,[]);
  console.log('PASS: pre-burst explicit selection, timeout selects all, center reveals actual underlying content, edge reveal, drag closure and undo.');
 }finally{await browser.close();}

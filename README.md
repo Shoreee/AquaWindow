@@ -189,3 +189,5 @@ MIT。窗口内容里的论文、会议和文件都是虚构的，用来把任�
 GitHub Pages 在线版：[AquaWindow](https://shoreee.github.io/AquaWindow/)。点击左上角 AquaWindow，在密码输入框中填写自己的 DeepSeek API Key，点击「保存 Key」，然后主动开启「接入 DeepSeek」。默认关闭。Key 只在当前页面内存中保留，刷新后清空，不写入 localStorage、sessionStorage、Git 仓库或构建产物；填写的 Key 只随 HTTPS 请求发给 DeepSeek 官方接口。清除或替换 Key 会关闭接入并取消在途请求。未填页面 Key 的本地开发版仍可选择使用服务端 `.env.local` 配置。
 
 手动搬运的包覆从鼠标最初落点开始，自动布局仍从角落开始；包覆时长已增加，包住后再带动窗口移动，到位退膜。验证：`pnpm test:keys`、`pnpm test:boundary`。发布前执行 `pnpm check:secrets`，GitHub Pages 工作流也会检查源码与构建产物。
+
+手动拖动立即跟随鼠标，较慢的包覆只作为从落点展开的同步反馈；自动搬运仍先包覆再位移。第 2 项揭示是与窗口外侧相通的局部角落翻揭，第 1 项才是中央圆角矩形镂空。

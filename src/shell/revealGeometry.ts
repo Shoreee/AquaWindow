@@ -15,9 +15,15 @@ export function revealContour(c:RevealShape,time:number){
   const contour=roundedContour(x+(rw-hw)/2,y+(rh-hh)/2,hw,hh,20);
   points=contour.map(q=>{const wave=livingWave(q.s,time)*p*(1-a);return [q.x+q.nx*wave,q.y+q.ny*wave];});
  }else{
-  const left=view.edge==='left',size=Math.min(300,Math.max(180,w*view.extent))*p*(1-a);
-  points=[[left?0:w,0],...Array.from({length:65},(_,i):[number,number]=>{const t=i/64;const bite=Math.max(0,size*Math.sqrt(1-t*t)+livingWave(t*h,time)*Math.sin(t*Math.PI)*p*(1-a));return [left?bite:w-bite,t*h];})];
-  x=left?0:w-size;y=0;rw=size;rh=h;
+  // Extend beyond both outside edges. Smoothing a closed cut inside the window
+  // used to round it into an enclosed hole instead of opening the corner.
+  const left=view.edge==='left',size=Math.min(280,Math.max(155,w*view.extent))*p*(1-a);
+  const height=Math.min(220,h*.43)*p*(1-a),outside=left?-24:w+24;
+  const inner=Array.from({length:49},(_,i):[number,number]=>{const t=i/48,bite=size*Math.pow(1-t,.85)+livingWave(t*height,time)*Math.sin(t*Math.PI)*p*(1-a);return [left?bite:w-bite,t*height];});
+  const rimPath=inner.map((q,i)=>`${i?'L':'M'}${q[0].toFixed(2)} ${q[1].toFixed(2)}`).join('');
+  const path=`M${outside} -24L${inner[0][0].toFixed(2)} -24${rimPath.replace(/^M/,'L')}L${outside} ${(height+24).toFixed(2)}Z`;
+  const handle=inner[24];
+  return {path,rimPath,active:p>.0001&&a<.9999,handles:[[handle[0],handle[1],view.edge]],rw:size,rh:height};
  }
  const path=smoothClosed(points.map(q=>({x:q[0],y:q[1]})));
  const rimPath=view.revealMode==='hole'?path:points.slice(1).map((q,i)=>`${i?'L':'M'}${q[0].toFixed(2)} ${q[1].toFixed(2)}`).join('');

@@ -7,7 +7,7 @@ let cancelCurrent:(()=>void)|null=null;
 export function manualWindowMotionActive(){return !!cancelCurrent;}
 export function cancelManualWindowMotion(){if(!cancelCurrent)return false;cancelCurrent();return true;}
 /** Native gestures and agent plans write the same motion contract, without rerendering documents. */
-export function beginWindowMotion(ids:string[],intent:'move'|'resize',point?:{x:number;y:number}){
+export function beginWindowMotion(ids:string[],intent:'move'|'resize',point?:{x:number;y:number},direct=false){
  cancelCurrent?.();
  const starts=new Map(ids.map(id=>[id,{...kernel.get(id)!.rect}]));let started=performance.now();
  let raf=0,ending=0,releaseAt=0,stopped=false,activated=false,lastAt=started,activity=0,coverage=0;
@@ -26,7 +26,7 @@ export function beginWindowMotion(ids:string[],intent:'move'|'resize',point?:{x:
   const state=kernel.getState(),windows={...state.windows};
   for(const id of ids){const w=windows[id],from=starts.get(id);if(!w||!from)continue;
    const desired=targets.get(id)!,classification=boundaryChange(from,desired),carried=intent==='move'||classification.kind==='move';
-   const blend=ending&&fade<=0?1:carried?(1-Math.exp(-dt*26))*Math.max(0,Math.min(1,(coverage-.94)/.06)):1;
+   const blend=direct||ending&&fade<=0?1:carried?(1-Math.exp(-dt*26))*Math.max(0,Math.min(1,(coverage-.94)/.06)):1;
    const to={x:w.rect.x+(desired.x-w.rect.x)*blend,y:w.rect.y+(desired.y-w.rect.y)*blend,w:w.rect.w+(desired.w-w.rect.w)*blend,h:w.rect.h+(desired.h-w.rect.h)*blend};
    if(Math.hypot(desired.x-to.x,desired.y-to.y,desired.w-to.w,desired.h-to.h)>1)settled=false;
    const old=previous.get(id)!,delta=Math.hypot(to.x-old.x,to.y-old.y,to.w-old.w,to.h-old.h);previous.set(id,{...to});
@@ -46,7 +46,7 @@ export function beginWindowMotion(ids:string[],intent:'move'|'resize',point?:{x:
   raf=requestAnimationFrame(draw);
  };
  cancelCurrent=()=>{clear();kernel.endGesture();};
- return {update(id:string,rect:Rect){if(stopped)return;targets.set(id,{...rect});
+ return {update(id:string,rect:Rect){if(stopped)return;targets.set(id,{...rect});if(direct)kernel.setRect(id,rect);
  if(!activated){const from=starts.get(id)!;if(Math.hypot(rect.x-from.x,rect.y-from.y,rect.w-from.w,rect.h-from.h)<1)return;activated=true;started=lastAt=performance.now();beginMaterial(ids);raf=requestAnimationFrame(draw);}
  },get stopped(){return stopped;},finish(){if(!activated){clear();kernel.endGesture();}else if(!stopped&&!ending)ending=performance.now();},cancel(){clear();kernel.endGesture();}};
 }
