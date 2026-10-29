@@ -58,6 +58,7 @@ function AgentSceneImpl() {
       withdrawFlight?:boolean;
       established?:boolean;
       suppressFeedback?:boolean;
+      revealOutline?:boolean;
       returned?:number;
       lastWindow?:WindowState;
       fade: number;
@@ -390,7 +391,7 @@ function AgentSceneImpl() {
         const nx = (end[0] - from[0]) / distance,
           ny = (end[1] - from[1]) / distance;
         const supporting = !!s.plan?.supportTargets.includes(id);
-        if(s.plan)c.suppressFeedback=!!reveals.length&&!revealTargets.has(id);
+        if(s.plan){c.suppressFeedback=!!reveals.length&&!revealTargets.has(id);c.revealOutline=!!reveals.length;}
         const strength = (supporting ? 0.6 : 1) * c.fade;
         const packet = handoff,
           arrived = operation ? (operation.docked ? 1 : operation.arrival) : (s.plan ? 1 : packet.arrived);
@@ -433,7 +434,7 @@ function AgentSceneImpl() {
           const link: FlowLink = {
             selection: !operation,
             withdrawing,
-            highlight:reveals.length||c.suppressFeedback?0:withdrawing?1-smooth((c.withdrawAge??0)/.5):arrived*c.fade,
+            highlight:reveals.length||c.suppressFeedback||c.revealOutline?0:withdrawing?1-smooth((c.withdrawAge??0)/.5):arrived*c.fade,
             coordinator:id===s.plan?.primaryTargets[0],
             transport: operation?.transport.coverage ?? 0,
             transportProgress: operation?.transport.progress ?? 0,

@@ -1021,3 +1021,6 @@
 .system-drop .deepseek-key-actions button{padding:7px 10px;border-radius:8px;background:#ecf3f6;font-size:11px;}
 .deepseek-key-actions button:disabled{opacity:.45;}
 .deepseek-key-form small{color:#748292;font-size:10px;line-height:1.5;}
+/* A peeled corner must also release its old rectangular frame and shadow. */
+.production-desktop .aw-win.agent-revealed>.aw-shell{box-shadow:none;}
+.aw-win.agent-revealed::after{opacity:0!important;}
