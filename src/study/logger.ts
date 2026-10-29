@@ -27,8 +27,8 @@ const lastMove = new Map<string, number>();
 
 export function log(r: Omit<LogRecord, 't' | 'wall'>) {
   const t = performance.now();
-  if ((r.type === 'move' || r.type === 'resize') && r.windowId) {
-    const k = r.windowId + r.type;
+  if (((r.type === 'move' || r.type === 'resize') && r.windowId) || r.type==='adaptation.preview') {
+    const k = (r.windowId??'') + r.type;
     if (t - (lastMove.get(k) ?? -1e9) < 250) return;
     lastMove.set(k, t);
   }

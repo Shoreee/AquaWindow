@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright-core';
+import {mkdir} from 'node:fs/promises';
+const out='screenshots/qa';await mkdir(out,{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true});
+try{
+ const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:2,recordVideo:{dir:`${out}/capsule-videos`,size:{width:1440,height:900}}});const page=await context.newPage(),errors=[],calls=[];
+ page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error'||m.text().includes('Energy renderer unavailable'))errors.push(m.text())});page.on('request',r=>{if(r.url().includes('/api/agent/'))calls.push(r.url())});
+ await page.goto(process.env.AW_URL??'http://127.0.0.1:5175/');await page.waitForFunction(()=>window.__aw?.planBuffer.entries.size);
+ const baseline=await page.evaluate(()=>window.__aw.kernel.getState().windows);
+ await page.mouse.move(1370,780);await page.keyboard.down('Space');await page.waitForFunction(()=>window.__aw.adaptation.store.get().phase==='cycling');for(let i=0;i<3;i++)await page.keyboard.press('ArrowRight');await page.keyboard.up('Space');
+ await page.waitForFunction(()=>window.__aw.adaptation.store.get().phase==='idle');await page.waitForTimeout(950);
+ const caps=()=>page.evaluate(()=>window.__aw.kernel.list().filter(w=>w.form==='capsule'&&!w.minimized));let [cap]=await caps();assert.ok(cap.capsuleRect.w<290&&cap.capsuleRect.h<112);assert.equal(cap.props.agentCapsule.members.length,3);
+ const group=()=>page.locator('.task-session .session-capsule').first();
+ let r=await group().boundingBox();await page.locator('.task-session .capsule-page').nth(1).hover();assert.ok(await page.locator('.capsule-page-title').isVisible());assert.equal(await page.locator('.capsule-hovering').count(),1);await page.screenshot({path:`${out}/capsule-page-hover.png`});
+ await page.mouse.move(r.x+40,r.y+35);await page.mouse.down();await page.mouse.move(r.x-100,r.y+130,{steps:9});assert.equal(await page.locator('.task-session .capsule-pages').count(),0,'Moving hides every page preview');await page.mouse.up();await page.waitForTimeout(450);let [moved]=await caps();assert.ok(moved.capsuleRect.x<cap.capsuleRect.x-50);
+ const resize=await page.locator('.task-session .capsule-rz.rz-se').boundingBox();await page.mouse.move(resize.x+3,resize.y+3);await page.mouse.down();await page.mouse.move(resize.x+28,resize.y+11,{steps:7});assert.equal(await page.locator('.task-session .capsule-pages').count(),0,'Resizing hides page previews');await page.mouse.up();await page.waitForTimeout(450);[cap]=await caps();assert.equal(cap.props.agentCapsule.members.length,3);
+ async function extract(index){const slot=await page.locator('.task-session .capsule-page').nth(index).boundingBox();await page.keyboard.down('Alt');await page.mouse.move(slot.x+slot.width*.5,slot.y+slot.height*.5);await page.mouse.down();await page.mouse.move(slot.x-220,slot.y+180,{steps:12});await page.mouse.up();await page.keyboard.up('Alt');await page.waitForTimeout(600);}
+ const beforeWidth=cap.capsuleRect.w;await extract(1);[cap]=await caps();assert.equal(cap.props.agentCapsule.members.length,2);assert.ok(cap.capsuleRect.w<beforeWidth);await page.screenshot({path:`${out}/capsule-page-extraction.png`});
+ const hostId=cap.id;await extract(0);[cap]=await caps();assert.equal(cap.props.agentCapsule.members.length,1);assert.notEqual(cap.id,hostId,'Original host page can leave its container');assert.equal(await page.evaluate(id=>window.__aw.kernel.get(id).form,hostId),'normal');
+ await page.locator('.task-session .capsule-page').first().hover();await page.screenshot({path:`${out}/capsule-final-page-hover.png`});
+ const edge=await page.locator('.task-session .capsule-rz.rz-se').boundingBox();await page.mouse.move(edge.x+3,edge.y+3);await page.mouse.down();await page.mouse.move(edge.x+235,edge.y+140,{steps:10});await page.waitForFunction(()=>Object.values(window.__aw.kernel.getState().windows).some(w=>w.props.agentCapsuleRupture!==undefined));await page.mouse.up();await page.waitForFunction(()=>!Object.values(window.__aw.kernel.getState().windows).some(w=>w.form==='capsule'),null,{timeout:8000});
+ const final=await page.evaluate(()=>window.__aw.kernel.getState());assert.equal(Object.keys(final.windows).length,3);assert.ok(Object.values(final.windows).every(w=>!w.minimized&&w.form==='normal'));assert.deepEqual(Object.keys(final.windows).sort(),Object.keys(baseline).sort());
+ await page.keyboard.press('Escape');await page.waitForTimeout(400);assert.equal((await caps()).length,1,'Rupture is one undoable gesture');
+ assert.deepEqual(errors,[]);assert.deepEqual(calls,[]);await context.close();console.log('VIDEO',await page.video().path());console.log('PASS: compact segmented pages, hover titles, native move/resize with hidden previews, Option extraction including the host, shrink, ordered rupture release, one-step undo and zero model calls.');
+}finally{await browser.close()}

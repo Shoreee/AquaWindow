@@ -84,6 +84,19 @@ export class WindowKernel {
   lastHistory() {
     return this.history[this.history.length - 1];
   }
+  /** Transient adaptation projection. It intentionally adds no undo entry. */
+  previewState(snapshot: KernelState) {
+    this.commit({ ...snapshot, screen: this.state.screen }, { actor: 'agent', type: 'adaptation.preview' });
+  }
+  commitAdaptation(before: KernelState, label: string) {
+    this.history.push({ label, actor: 'agent', t: this.now(), before });
+    if (this.history.length > 80) this.history.shift();
+    this.commit(this.state, { actor: 'agent', type: 'adaptation.commit', data: { label } });
+  }
+  replaceState(next: KernelState, label: string, actor: Actor = 'user') {
+    this.checkpoint(label, actor);
+    this.commit({ ...next, screen: this.state.screen }, { actor, type: 'apply', data: { label } });
+  }
   undo(actor: Actor = 'user') {
     const h = this.history.pop();
     if (!h) return;

@@ -1,0 +1,24 @@
+{
+  "environment": {
+    "browser": "Chrome headed",
+    "viewport": "1600x950",
+    "deviceScaleFactor": 2,
+    "scenario": "same branch deformation for 3.1 seconds",
+    "cpuThrottling": false
+  },
+  "measurement": "Chrome tracing; MainFrame.Draw is scoped draw work, not total end-to-end frame duration",
+  "before": {
+    "n": 173,
+    "ms": 1788.433999999999,
+    "max": 18.635,
+    "meanMs": 10.337768786127162,
+    "droppedFrameEvents": 264
+  },
+  "after": {
+    "n": 352,
+    "ms": 111.01899999999995,
+    "max": 2.499,
+    "meanMs": 0.3153948863636362,
+    "droppedFrameEvents": 21
+  }
+}

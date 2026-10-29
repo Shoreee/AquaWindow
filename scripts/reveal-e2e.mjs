@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright-core';
+const browser=await chromium.launch({channel:'chrome',headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];
+ page.on('pageerror',e=>errors.push(String(e)));
+ await page.goto(process.env.AW_URL??'http://127.0.0.1:5175/');await page.waitForFunction(()=>window.__aw?.planBuffer.entries.size);
+ const state=()=>page.evaluate(()=>window.__aw.adaptation.store.get());
+ const original=await page.evaluate(()=>window.__aw.kernel.getState());
+ await page.mouse.move(1390,790);await page.keyboard.down('Space');assert.deepEqual((await state()).selectedIds,[]);
+ const first=await page.locator('[data-win]').last().getAttribute('data-win');
+ await page.locator(`[data-win="${first}"] .aw-title`).click({position:{x:150,y:20}});assert.deepEqual((await state()).selectedIds,[first]);
+ await page.keyboard.up('Space');await page.waitForFunction(()=>window.__aw.adaptation.store.get().phase==='idle');
+ await page.keyboard.down('Space');assert.deepEqual((await state()).selectedIds,[]);
+ await page.waitForFunction(()=>window.__aw.adaptation.store.get().phase==='cycling');
+ assert.deepEqual((await state()).selectedIds,original.order);assert.equal((await state()).plan.steps[0].mode,'hole');
+ await page.keyboard.up('Space');await page.waitForFunction(()=>window.__aw.adaptation.store.get().phase==='idle');
+ const hole=page.locator('[data-reveal-mode=hole]');assert.equal(await hole.count(),1);assert.ok(await hole.getAttribute('data-reveal-source'));
+ const host=hole.locator('..').locator('.aw-body');const clip=await host.evaluate(e=>getComputedStyle(e).clipPath);assert.ok(clip.includes('evenodd'));assert.equal(await page.locator('[data-agent-result]').count(),0);
+ await page.screenshot({path:'screenshots/qa/reveal-hole.png'});
+ const handle=hole.locator('[data-reveal-handle=left]'),box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+125,box.y+box.height/2,{steps:10});await page.mouse.up();
+ await page.waitForFunction(()=>Object.values(window.__aw.kernel.getState().windows).some(w=>w.props.agentRevealClosure?.amount===1));await page.waitForTimeout(50);
+ assert.ok(!(await host.evaluate(e=>getComputedStyle(e).clipPath)).includes('evenodd'));
+ await page.keyboard.press('Escape');await page.waitForTimeout(60);assert.ok((await host.evaluate(e=>getComputedStyle(e).clipPath)).includes('evenodd'));
+ await page.keyboard.press('Escape');
+ await page.mouse.move(1390,790);await page.keyboard.down('Space');await page.waitForFunction(()=>window.__aw.adaptation.store.get().phase==='cycling');await page.keyboard.press('ArrowRight');await page.keyboard.up('Space');await page.waitForFunction(()=>window.__aw.adaptation.store.get().phase==='idle');
+ assert.equal(await page.locator('[data-reveal-mode=edge]').count(),1);assert.equal(await page.locator('[data-agent-result]').count(),0);assert.deepEqual(errors,[]);
+ console.log('PASS: pre-burst explicit selection, timeout selects all, center reveals actual underlying content, edge reveal, drag closure and undo.');
+}finally{await browser.close();}

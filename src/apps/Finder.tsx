@@ -31,8 +31,10 @@ export default function Finder({ win }: { win: WindowState }) {
   const path = String(win.props.path ?? 'Downloads');
   const footprint = win.props.view === 'footprint';
   const selected = win.props.selected as string | undefined;
-  const [q, setQ] = useState('');
-  const [groupByTask, setGroupByTask] = useState(false);
+  const q = String(win.props.query ?? '');
+  const setQ = (query: string) => kernel.setProps(win.id, { query });
+  const [manualGroup, setGroupByTask] = useState(false);
+  const groupByTask = manualGroup || !!win.props.agentGrouping;
   const searchTimer = useRef<number | null>(null);
 
   const agentMade = AGENT_FILES.slice(0, created);
@@ -142,12 +144,11 @@ export default function Finder({ win }: { win: WindowState }) {
           <div className="finder-path">{footprint ? 'Agent footprint · claude-code session 17' : path}</div>
           {tech.provenance && !footprint && (
             <button className={`chip ${groupByTask ? 'on' : ''}`} onClick={() => setGroupByTask((g) => !g)}>
-              Group by task
+              按任务分组
             </button>
           )}
-          <input className="finder-search" placeholder={tech.semanticFiles ? 'Search names, titles, why…' : 'Search'} value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="finder-search" placeholder="搜索文件、论文或线索…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        {tech.semanticFiles && !footprint && <div className="lens-note">Semantic lens on — opaque names are resolved to titles, and each file shows where it came from.</div>}
         <div className="finder-head">
           <span>Name</span>
           <span>{footprint ? 'Created by' : tech.provenance ? 'Came from' : 'Date Modified'}</span>

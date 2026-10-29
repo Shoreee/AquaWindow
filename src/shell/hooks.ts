@@ -5,7 +5,7 @@ export { agent, bus, kernel, ui, undo, workArea } from '../system';
 export { useKernel as useKernelState } from '../system/kernel';
 
 /** All windows in stacking order (back → front), memoised on the kernel revision. */
-export function useWindows() {
-  const s = useKernel((st) => st);
-  return useMemo(() => s.order.map((id) => s.windows[id]).filter(Boolean), [s]);
+export function useWindows(enabled=true) {
+  const s = useKernel(st => enabled?st:null);
+  return useMemo(() => s?s.order.map((id) => s.windows[id]).filter(Boolean):[], [s]);
 }

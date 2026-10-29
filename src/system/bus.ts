@@ -6,6 +6,9 @@
 export interface BusEvent {
   t: number;
   type:
+    | 'window.focus'
+    | 'paper.read'
+    | 'note.edit'
     | 'meeting.mention'
     | 'meeting.slide'
     | 'meeting.speaker'

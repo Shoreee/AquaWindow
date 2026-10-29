@@ -1,6 +1,7 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { WindowState } from '../kernel/types';
 import { bus } from '../system';
+import { documentContent } from './content';
 
 const DOCS: Record<string, { title: string; html: string; goal?: string[] }> = {
   draft: {
@@ -22,9 +23,28 @@ const DOCS: Record<string, { title: string; html: string; goal?: string[] }> = {
   },
 };
 
+const editedHtml = new Map<string, string>();
+const openEditors = new Map<string, Set<HTMLDivElement>>();
+
 export default function Writer({ win }: { win: WindowState }) {
-  const doc = DOCS[String(win.props.docId ?? 'draft')] ?? DOCS.draft;
+  const docId = String(win.props.docId ?? 'draft');
+  const doc = DOCS[docId] ?? DOCS.draft;
   const done = useRef(false);
+  const body = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = body.current;
+    if (!element) return;
+    let editors = openEditors.get(docId);
+    if (!editors) openEditors.set(docId, (editors = new Set()));
+    editors.add(element);
+    element.innerHTML = editedHtml.get(docId) ?? doc.html;
+    documentContent.set(docId, element.innerText);
+    return () => {
+      editors.delete(element);
+      if (!editors.size) openEditors.delete(docId);
+    };
+  }, [docId, doc]);
   return (
     <div className="writer">
       <div className="writer-tools">
@@ -41,12 +61,18 @@ export default function Writer({ win }: { win: WindowState }) {
         <div className="writer-title">{doc.title}</div>
         <div
           className="writer-body"
+          ref={body}
           contentEditable
           suppressContentEditableWarning
           spellCheck={false}
-          dangerouslySetInnerHTML={{ __html: doc.html }}
+          dangerouslySetInnerHTML={{ __html: editedHtml.get(docId) ?? doc.html }}
           onInput={(e) => {
-            const text = (e.target as HTMLElement).innerText;
+            const target = e.target as HTMLDivElement;
+            editedHtml.set(docId, target.innerHTML);
+            for (const other of openEditors.get(docId) ?? []) if (other !== target) other.innerHTML = target.innerHTML;
+            const text = target.innerText;
+            documentContent.set(docId, text);
+            bus.emit({ type: 'note.edit', windowId: win.id, data: { docId } });
             if (doc.goal && !done.current && doc.goal.every((g) => text.includes(g))) {
               done.current = true;
               bus.emit({ type: 'task.done', windowId: win.id, data: { task: 'cite-numbers' } });

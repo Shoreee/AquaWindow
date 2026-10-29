@@ -16,6 +16,28 @@
   z-index: 6;
 }
 
+/* The recursive view is one shared desktop state seen through its own centre tile. */
+.recursive-desktop { position: fixed; inset: 0; z-index: 99999; background: #101724; color: #eaf0ff; }
+.recursive-camera { position: absolute; inset: 0; overflow: hidden; }
+.recursive-stage { width: 100%; height: 100%; transform-origin: 0 0; }
+.recursive-scene { position: relative; width: 100%; height: 100%; overflow: hidden; background: #f4f6fb; }
+.recursive-tile { position: absolute; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid #111927; }
+.recursive-window { text-align: left; background: #f4f6fb; color: #252b3d; box-shadow: 0 0 0 1px #0a1120, 0 9px 24px #0008; }
+.recursive-window:hover { outline: 3px solid #70a8ff; outline-offset: -3px; }
+.recursive-window-inner { display: flex; flex-direction: column; transform-origin: 0 0; }
+.recursive-window-bar { display: flex; align-items: center; gap: 7px; height: 28px; padding: 0 9px; background: #dfe6f2; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.recursive-window-bar span { overflow: hidden; text-overflow: ellipsis; }
+.recursive-app-content { flex: 1; min-height: 0; overflow: auto; background: #fff; }
+.recursive-app-content > * { min-height: 100%; }
+.recursive-window.recursive-focused { box-shadow: 0 0 0 2px #70a8ff, 0 12px 30px #0008; }
+.recursive-portal { left: 29%; top: 29%; width: 42%; height: 42%; background: #f4f6fb; box-shadow: 0 0 0 4px #76a7ff, 0 14px 45px #0008; }
+.recursive-limit { width: 100%; height: 100%; display: grid; place-items: center; font-size: 36px; color: #77a9ff; }
+.recursive-toolbar { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; align-items: center; gap: 22px; padding: 9px 14px; border-radius: 12px; background: #101724e8; border: 1px solid #ffffff33; box-shadow: 0 8px 28px #0007; white-space: nowrap; font-size: 12px; cursor: ns-resize; }
+.recursive-toolbar b { color: #86b3ff; font-size: 18px; }
+.recursive-toolbar button { color: #fff; cursor: pointer; }
+.recursive-toolbar .recursive-zoom-button { width: 26px; height: 26px; border-radius: 6px; background: #ffffff25; font-size: 18px; line-height: 1; }
+.recursive-toolbar kbd { color: #d8e7ff; background: #ffffff22; border-color: #ffffff33; }
+
 /* ── windows ───────────────────────────────────────────────────────────────── */
 .aw-win {
   position: absolute;

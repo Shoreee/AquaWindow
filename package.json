@@ -6,17 +6,29 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
+    "start": "tsx server/index.ts --serve-dist",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit",
-    "test": "vitest run"
+    "typecheck": "tsc -b --noEmit && tsc -p server/tsconfig.json",
+    "test": "vitest run",
+    "test:e2e": "node scripts/adaptive-e2e.mjs",
+    "test:embodied": "node scripts/embodied-e2e.mjs",
+    "test:fluid": "node scripts/fluid-e2e.mjs",
+    "test:render": "node scripts/render-performance-e2e.mjs",
+    "test:compositor": "node scripts/compositor-performance.mjs",
+    "test:capsule": "node scripts/capsule-e2e.mjs",
+    "test:keys": "node scripts/key-e2e.mjs",
+    "test:boundary": "node scripts/boundary-e2e.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs"
   },
   "dependencies": {
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "tsx": "^4.20.0"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",

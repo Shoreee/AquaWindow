@@ -1,3 +1,4 @@
+import {cancelCapsuleMotion} from "../agent/adaptive/capsule";
 import { AgentController } from '../agent/controller';
 import { log, setLogContext } from '../study/logger';
 import { bus } from './bus';
@@ -33,6 +34,7 @@ bus.on((e) => {
 });
 
 export function undo() {
+  if(cancelCapsuleMotion())return;
   const last = kernel.lastHistory();
   kernel.undo('user');
   if (last?.actor === 'agent') agent.noteUndo();

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import {memo, useEffect, useRef, useState } from 'react';
 import { agentStore } from '../agent/controller';
 import { APPS, appName } from '../apps/registry';
 import { AppIcon } from '../apps/icons';
@@ -300,9 +300,9 @@ function DockIcon({ children, label, running, onClick, scaleFor }: { children: R
 }
 
 // ── Mission Control / switcher / toasts ──────────────────────────────────────
-export function MissionControl() {
+function MissionControlImpl() {
   const open = useStore(ui, (s) => s.missionControl);
-  const wins = useWindows();
+  const wins = useWindows(open);
   if (!open) return null;
   const W = workArea();
   const n = wins.length;
@@ -337,9 +337,9 @@ export function MissionControl() {
   );
 }
 
-export function Switcher() {
+function SwitcherImpl() {
   const sw = useStore(ui, (s) => s.switcher);
-  const wins = useWindows();
+  const wins = useWindows(sw.open);
   if (!sw.open) return null;
   const list = recencyList(wins);
   return (
@@ -370,7 +370,7 @@ export function Toasts() {
                 ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) }));
               }}
             >
-              Undo
+              撤回 · Esc
             </button>
           )}
         </div>
@@ -388,3 +388,6 @@ export function boot() {
   kernel.setRect(id, { x: W.x + (W.w - 780) / 2, y: W.y + 20, w: 780, h: Math.min(640, W.h - 40) }, 'system');
   agent.start();
 }
+
+export const MissionControl=memo(MissionControlImpl);
+export const Switcher=memo(SwitcherImpl);

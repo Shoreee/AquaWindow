@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import {memo, type ReactNode } from 'react';
 
 const G: Record<string, [string, string]> = {
   finder: ['#6fd3ff', '#2f7bff'],
@@ -99,7 +99,7 @@ const GLYPH: Record<string, ReactNode> = {
   ),
 };
 
-export function AppIcon({ appId, size = 48 }: { appId: string; size?: number }) {
+function AppIconImpl({ appId, size = 48 }: { appId: string; size?: number }) {
   const [a, b] = G[appId] ?? ['#ccc', '#888'];
   const gid = `ig-${appId}`;
   return (
@@ -116,3 +116,5 @@ export function AppIcon({ appId, size = 48 }: { appId: string; size?: number }) 
     </svg>
   );
 }
+
+export const AppIcon=memo(AppIconImpl);

@@ -8,3 +8,10 @@ dist
 screenshots/*.tmp.png
 
 screenshots/
+
+# Local model I/O contains workspace content; never publish it with the demo.
+/log/
+
+# Keys are local only; publish the blank example, never any environment variant.
+.env*
+!.env.example

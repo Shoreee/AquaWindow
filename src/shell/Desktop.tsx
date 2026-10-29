@@ -1,13 +1,19 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { appState } from '../apps/state';
 import { FieldLayer, type FieldShape } from '../field/FieldLayer';
 import { useStore } from '../system/createStore';
 import { computeVisuals, stackingOrder } from '../techniques/visuals';
 import { ControlCenter, Dock, MenuBar, MissionControl, recencyList, Switcher, Toasts } from './Chrome';
-import { agent, kernel, ui, undo, useKernelState } from './hooks';
+import { kernel, ui, undo, useKernelState } from './hooks';
 import { ResearcherConsole, ScenarioPanel } from './Panels';
 import { ProposalLayer } from './ProposalLayer';
+import { RecursiveDesktop } from './RecursiveDesktop';
 import { Window } from './Window';
+import { SystemDock, SystemMenuBar } from './SystemChrome';
+import { AgentScene } from './AgentScene';
+import { startAdaptiveRuntime } from '../agent/adaptive/runtime';
+
+const development = import.meta.env.DEV && new URLSearchParams(location.search).get('dev') === '1';
 
 const editable = (el: EventTarget | null) => {
   const e = el as HTMLElement | null;
@@ -17,12 +23,7 @@ const editable = (el: EventTarget | null) => {
 function useKeyboard() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !editable(e.target) && ui.get().tech.depth) {
-        e.preventDefault();
-        if (!ui.get().xray) ui.set({ xray: true });
-        return;
-      }
-      if (e.key === '`' && !editable(e.target)) {
+      if (development && e.key === '`' && !editable(e.target)) {
         ui.set((s) => ({ consoleOpen: !s.consoleOpen }));
         return;
       }
@@ -44,7 +45,6 @@ function useKeyboard() {
       }
     };
     const up = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && ui.get().xray) ui.set({ xray: false });
       if (e.key === 'Alt' && ui.get().switcher.open) {
         const list = recencyList(kernel.list());
         const i = ((ui.get().switcher.index % list.length) + list.length) % list.length;
@@ -57,19 +57,17 @@ function useKeyboard() {
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     window.addEventListener('blur', blur);
-    const resize = () => kernel.setScreen(window.innerWidth, window.innerHeight);
-    window.addEventListener('resize', resize);
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
       window.removeEventListener('blur', blur);
-      window.removeEventListener('resize', resize);
     };
   }, []);
 }
 
 export function Desktop() {
   useKeyboard();
+  const [recursiveOrder, setRecursiveOrder] = useState<string[] | null>(null);
   const state = useKernelState((s) => s);
   const tech = useStore(ui, (s) => s.tech);
   const activeId = useStore(ui, (s) => s.activeId);
@@ -77,13 +75,20 @@ export function Desktop() {
   const snap = useStore(ui, (s) => s.snapPreview);
   const mention = useStore(appState, (s) => s.mentionAt !== null && !s.answered);
 
-  useEffect(() => {
-    agent.start();
-    return () => agent.stop();
-  }, []);
+  useEffect(startAdaptiveRuntime, []);
 
   const visuals = useMemo(() => computeVisuals({ state, tech, activeId }), [state, tech, activeId]);
   const order = useMemo(() => stackingOrder(state), [state]);
+
+  useEffect(() => {
+    const toggle = (e: KeyboardEvent) => {
+      if (!development || !(e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r')) return;
+      e.preventDefault();
+      setRecursiveOrder((current) => current ? null : [...kernel.getState().order]);
+    };
+    window.addEventListener('keydown', toggle);
+    return () => window.removeEventListener('keydown', toggle);
+  }, []);
 
   const shapes = useMemo(() => {
     const groups = new Map<string, number>();
@@ -104,7 +109,7 @@ export function Desktop() {
   }, [order, state, visuals, tech.fusion, mention]);
 
   return (
-    <div className={`desktop ${xray ? 'xray' : ''} ${tech.shape === 'squircle' ? 'fluid-mode' : ''}`}>
+    <div className={`desktop production-desktop ${xray ? 'xray' : ''} ${tech.shape === 'squircle' ? 'fluid-mode' : ''}`}>
       <div className="wallpaper">
         <div className="blob b1" />
         <div className="blob b2" />
@@ -130,15 +135,13 @@ export function Desktop() {
       </div>
       {snap && <div className="snap-preview" style={{ left: snap.x, top: snap.y, width: snap.w, height: snap.h }} />}
       {xray && <div className="xray-hint">X-ray — front layers are see-through · release Space</div>}
-      <ProposalLayer />
-      <ScenarioPanel />
-      <MenuBar />
-      <ControlCenter />
-      <Dock />
+      {development ? <><ProposalLayer /><ScenarioPanel /><MenuBar /><ControlCenter /><Dock /></> : <><SystemMenuBar /><SystemDock /></>}
       <Toasts />
       <MissionControl />
       <Switcher />
-      <ResearcherConsole />
+      {development && <ResearcherConsole />}
+      <AgentScene />
+      {recursiveOrder && <RecursiveDesktop state={state} initialOrder={recursiveOrder} onClose={() => setRecursiveOrder(null)} />}
     </div>
   );
 }

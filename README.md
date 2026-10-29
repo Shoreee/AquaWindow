@@ -1,5 +1,55 @@
 # AquaWindow
 
+正式 demo 是一个浏览器虚拟桌面：直接打开论文、研究笔记和文件窗口，通过长按空格唤出自适应 Agent。旧研究原型保留为开发工具。
+
+## 启动正式 demo
+
+```bash
+pnpm install
+cp .env.example .env.local
+# 可选：也可以在左上角直接填写当前页面使用的 DeepSeek API Key
+pnpm dev
+```
+
+打开 <http://localhost:5173>。`pnpm dev` 同时启动 Vite 和本地 Agent 服务（默认 8787）；密钥仅由服务端读取。`DEEPSEEK_MODEL` 默认 `deepseek-flash`。构建后使用 `pnpm build && pnpm start`，打开 <http://127.0.0.1:8787>。
+
+| 操作 | 行为 |
+| --- | --- |
+| 长按空格 | 鼠标展开，持续蓄能；2.5 秒后呈现候选 |
+| 按住时点击窗口 | 选中/取消主体，并重置 2.5 秒计时 |
+| 按住时点击空白 | 清空选择，进行全局适应 |
+| 持续按住 | 每 2.4 秒切换候选 |
+| 松手 / 再按空格 | 冻结方案 / 确认方案 |
+| Esc | 恢复本轮唤出前的布局和结果 |
+| ⌘/Ctrl Z | 撤销已确认的整体布局 |
+| 点击会话胶囊 | 恢复窗口、阅读位置与会话 |
+
+默认使用本地规则，不请求模型：并排摆放任务与参考窗口、将主窗口居中并让关联窗口移到两侧，或收纳为会话。左上角 **AquaWindow → 接入 DeepSeek** 是本次页面会话的开关，默认关闭；只有打开后才允许真实模型请求，关闭会中止队列与在途请求。本地结果引用实际来源，不生成研究结论。
+
+开启 DeepSeek 后，模型在语义上下文稳定后后台预计算，缓存 30 秒内新鲜，60 秒后失效。首次预热取决于 API 响应；手势触发后没有有效缓存时最多额外等 3 秒，再收回重试。实验奖励接口位于 `src/agent/adaptive/types.ts`，默认未配置，当前使用模型排序。
+
+## DeepSeek 复盘日志
+
+每次真实模型调用写入 `log/YYYY-MM-DD/<请求 ID>.json`（目录日期使用上海时区）。文件包含完整输入（提示词、上下文、模型参数）、原始输出、校验结果、耗时和错误。首次写入状态为 `pending`，结束后原子更新为 `complete` 或 `error`。Authorization 和 API key 不写入日志，`log/` 已加入 Git 忽略。
+
+## 验证与开发工具
+
+```bash
+pnpm test
+pnpm typecheck
+node scripts/local-adaptive-e2e.mjs # 本地模式、定制鼠标、移位与条带抽取/恢复
+pnpm build
+# 先运行 pnpm dev；默认测试地址为 127.0.0.1:5174
+AW_URL=http://127.0.0.1:5173/ pnpm test:e2e
+```
+
+浏览器测试用确定性 API 测试响应覆盖交互，不消耗模型调用；截图、录像和帧率记录位于 `screenshots/qa/`。录像需要 `pnpm exec playwright-core install ffmpeg`。真实 API 不会使用测试响应兜底。
+
+开发模式下通过 `?dev=1` 打开旧研究工具；递归桌面仍可使用 Ctrl+Shift+R。下面保留研究原型说明与原始研究材料。
+
+<details>
+<summary>研究原型说明</summary>
+
 一个用来研究 **agent 协商的流体窗口布局** 的伪操作系统桌面。它不是操作系统，也不是又一个平铺窗口管理器：窗口在这里是一块块可以变形、融合、退到深处的**领地**，而领地的边界是人和布局 agent 谈判的地方。
 
 Agent 从不直接改窗口。它只提交 `LayoutProposal`。人在自主度旋钮允许的范围内接受、部分接受、拒绝，或者让它先做、再用一次撤销收回。
@@ -104,6 +154,9 @@ pnpm dev
 | F3 | Mission Control |
 | ⌘/Ctrl Z | 撤销一次布局（含 agent 做的） |
 | \` | 研究台 |
+| Ctrl + Shift + R | 进入 / 退出递归桌面实验视图 |
+| Ctrl / ⌘ / ⌥ + Shift + 滚轮（递归视图内） | 沿桌面自身的窗口连续缩放；也可点视图顶部的 +/- 按钮 |
+| 递归视图内拖窗口标题栏 | 移动同一窗口在所有递归层的布局；内容可直接操作 |
 
 ```bash
 pnpm test
@@ -114,3 +167,25 @@ pnpm build
 ## 许可
 
 MIT。窗口内容里的论文、会议和文件都是虚构的，用来把任务演出来，不代表真实文献。视觉上参考了 macOS 的桌面习惯（红绿灯、Dock、毛玻璃），没有借用 [playground-macos](https://github.com/purocean/playground-macos) 的代码。
+
+</details>
+
+
+### 当前自适应交互
+
+- 长按空格孵化核心，爆开后显示七个独立候选；左右方向键随时切换，松开空格直接采用。
+- 长按空格孵化时点击窗口增减对象；未点选则超时全选，爆开后再用左右箭头切换候选。
+- 点击提示中的「撤回」或按 Esc 撤回。候选不再自动轮播。
+- 胶囊可拖动及缩放；悬停页面段显示标题，Option 拖动该段释放单页。
+- 移动、缩放时隐藏内部预览；大幅拉大胶囊会破裂并按顺序释放窗口，双击或右上角箭头也可释放全部。
+
+胶囊专项验证：`pnpm test:capsule`。
+
+中央揭示裁切上层页面，寻找下层重要区域并配合移位；边缘揭示从边角蚕食。缺口显示真实下层及透明光流，波动边缘可拖动闭合，闭合可撤回。回归：`node scripts/reveal-e2e.mjs`。
+
+
+### 在线版与当前页面 API Key
+
+GitHub Pages 在线版：[AquaWindow](https://shoreee.github.io/AquaWindow/)。点击左上角 AquaWindow，在密码输入框中填写自己的 DeepSeek API Key，点击「保存 Key」，然后主动开启「接入 DeepSeek」。默认关闭。Key 只在当前页面内存中保留，刷新后清空，不写入 localStorage、sessionStorage、Git 仓库或构建产物；填写的 Key 只随 HTTPS 请求发给 DeepSeek 官方接口。清除或替换 Key 会关闭接入并取消在途请求。未填页面 Key 的本地开发版仍可选择使用服务端 `.env.local` 配置。
+
+手动搬运的包覆从鼠标最初落点开始，自动布局仍从角落开始；包覆时长已增加，包住后再带动窗口移动，到位退膜。验证：`pnpm test:keys`、`pnpm test:boundary`。发布前执行 `pnpm check:secrets`，GitHub Pages 工作流也会检查源码与构建产物。
