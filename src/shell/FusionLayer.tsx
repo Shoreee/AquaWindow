@@ -8,6 +8,17 @@ import {livingWave} from './livingGeometry';
 import {allSurfaceBonds,fusionPlacement,seamGeometry,type SurfaceBond} from './surfaceBondGeometry';
 import {beginSurfaceSplit,surfaceUi} from './surfaceFusion';
 import {ease} from '../agent/adaptive/choreography';
+import {anticipationPair,anticipationPath} from './fusionAnticipation';
+function FusionAnticipation({state,candidate}:{state:KernelState;candidate:{a:string;b:string}}){
+ const a=useRef<SVGGElement>(null),b=useRef<SVGGElement>(null),latest=useRef({state,candidate});latest.current={state,candidate};
+ useEffect(()=>{let raf=0;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const draw=(now:number)=>{const pair=anticipationPair(latest.current.state,latest.current.candidate);
+   if(pair)for(const [ref,w,first] of [[a,pair.a,pair.first],[b,pair.b,!pair.first]] as const){const d=anticipationPath(w,pair.axis,first,reduced?0:now/1000);ref.current?.querySelectorAll('[data-living-path]').forEach(node=>node.setAttribute('d',d));}
+   raf=requestAnimationFrame(draw);
+  };raf=requestAnimationFrame(draw);return()=>cancelAnimationFrame(raf);
+ },[]);
+ return <g className="surface-fusion-anticipation" pointerEvents="none"><LivingRim ref={a} path=""/><LivingRim ref={b} path=""/></g>;
+}
 function SurfaceSeam({bond,a,b,state}:{bond:SurfaceBond;a:WindowState;b:WindowState;state:KernelState}){
  const split=useStore(surfaceUi,s=>s.split?.id===bond.id?s.split:null),latest=useRef({bond,a,b,split,state});latest.current={bond,a,b,split,state};
  const rim=useRef<SVGGElement>(null),freeA=useRef<SVGGElement>(null),freeB=useRef<SVGGElement>(null),root=useRef<SVGGElement>(null);
@@ -50,6 +61,7 @@ export function FusionLayer({state}:{state:KernelState}){
  const preview=candidate&&state.windows[candidate.a]&&state.windows[candidate.b]?fusionPlacement(state.windows[candidate.a].rect,state.windows[candidate.b].rect,{x:8,y:36,w:state.screen.w-16,h:state.screen.h-122}):null;
  return <svg className="surface-fusion-layer" width={state.screen.w} height={state.screen.h} aria-label="窗口融合与表面张力接缝">
   {bonds.map(bond=><SurfaceSeam key={bond.id} bond={bond} a={state.windows[bond.a]} b={state.windows[bond.b]} state={state}/>)}
+  {candidate&&<FusionAnticipation state={state} candidate={candidate}/>}
   {candidate&&preview&&<g className="surface-fusion-preview" pointerEvents="none"><rect x={preview.rect.x+20} y={preview.rect.y+45} width="146" height="28" rx="14"/><text x={preview.rect.x+31} y={preview.rect.y+63}>松开，让相关窗口融合</text></g>}
  </svg>;
 }
