@@ -1,3 +1,4 @@
+import {fusionPlacement,surfaceBonds} from '../../shell/surfaceBondGeometry';
 import {visualRect} from "../../techniques/depth";
 import {capsuleSize} from "./capsuleGeometry";
 import type { KernelState, Rect, WindowState } from "../../kernel/types";
@@ -186,6 +187,16 @@ export function compilePlan(
       }
       const members=new Set([...step.targets,...context.sources.filter(source=>plan.artifacts.some(a=>step.artifactIds.includes(a.id)&&a.sourceIds.includes(source.id))).map(source=>source.windowId)]);
       for(const id of members){const w=windows[id];if(w)patch(id,{depth:0,props:{...w.props,agentBond:plan.id}});}
+      const hostId=step.targets.find(id=>windows[id]?.appId==='writer')??step.targets[0];
+      const peerId=[...members].find(id=>id!==hostId&&windows[id]?.appId==='preview')??[...members].find(id=>id!==hostId&&windows[id]?.form==='normal');
+      if(hostId&&peerId&&windows[hostId]&&windows[peerId]){
+       const host=windows[hostId],peer=windows[peerId],placement=fusionPlacement(host.rect,peer.rect,W);
+       const first=placement.axis==='x'?placement.rect.x<peer.rect.x:placement.rect.y<peer.rect.y;
+       const bond={id:`bond:${plan.id}:${hostId}:${peerId}`,a:first?hostId:peerId,b:first?peerId:hostId,axis:placement.axis,createdAt:0};
+       const group=`surface:${plan.id}`;
+       patch(hostId,{rect:placement.rect,group,props:{...host.props,surfaceBonds:[...surfaceBonds(host).filter(b=>b.id!==bond.id),bond]}});
+       patch(peerId,{group,props:{...peer.props,surfaceBonds:[...surfaceBonds(peer).filter(b=>b.id!==bond.id),bond]}});
+      }
     }
     if (step.type === "permeate")
       for (const id of step.targets) patch(id, { depth: step.depth });

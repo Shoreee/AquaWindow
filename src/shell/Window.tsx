@@ -1,5 +1,11 @@
+import {WindowMenu} from './WindowMenu';
+import {DockedCapsules} from './DockedCapsules';
+import {dockParent} from '../agent/adaptive/capsuleTree';
+import {NativeBondSkin} from './NativeBondSkin';
+import {cancelSurfaceInteraction,fuseSurfaces,previewSurfaceFusion,surfaceUi} from './surfaceFusion';
+import {attachedResize,isSurfaceGroup,surfaceBonds,surfaceComponent} from './surfaceBondGeometry';
 import {TransportSkin} from './TransportSkin';
-import {cancelCapsuleMotion} from "../agent/adaptive/capsule";
+import {cancelCapsuleMotion,packWindows,previewCapsuleDrop,finishCapsuleDrop,capsuleDropUi} from "../agent/adaptive/capsule";
 import {beginWindowMotion,cancelManualWindowMotion,maximizeWithMotion} from "../agent/adaptive/manualMotion";
 import { ease as motionEase } from "../agent/adaptive/choreography";
 import type { AgentMotion } from "../agent/adaptive/choreography";
@@ -10,7 +16,6 @@ import {AppSurface} from "./AppSurface";
 import { sameAppContent } from "./appContent";
 import { APPS } from '../apps/registry';
 import { AppIcon } from '../apps/icons';
-import { overlapArea } from '../kernel/geometry';
 import type { Rect, WindowState } from '../kernel/types';
 import { log } from '../study/logger';
 import { kernel, ui, workArea } from '../system';
@@ -69,24 +74,11 @@ function snapTarget(x: number, y: number): Rect | null {
   return null;
 }
 
-function nearestPartner(win: WindowState): WindowState | null {
-  let best: WindowState | null = null;
-  let bestD = Infinity;
-  for (const o of kernel.list()) {
-    if (o.id === win.id || o.minimized || o.form !== 'normal' || o.depth > 0.05) continue;
-    const gx = Math.max(0, Math.max(o.rect.x - (win.rect.x + win.rect.w), win.rect.x - (o.rect.x + o.rect.w)));
-    const gy = Math.max(0, Math.max(o.rect.y - (win.rect.y + win.rect.h), win.rect.y - (o.rect.y + o.rect.h)));
-    const d = Math.hypot(gx, gy) - overlapArea(o.rect, win.rect) / 1000;
-    if (d < bestD) {
-      bestD = d;
-      best = o;
-    }
-  }
-  return best;
-}
 
 function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) {
   const def = APPS[win.appId];
+  const [menuAt,setMenuAt]=useState<{x:number;y:number}|null>(null);
+  const closeMenu=useCallback(()=>setMenuAt(null),[]);
   const capsule = win.form === 'capsule';
   const rect = capsule ? capsuleRectFor(win, kernel.getState().screen) : win.rect;
   const [peel, setPeel] = useState<{ corner: Pt; p: Pt; pinned: boolean } | null>(null);
@@ -99,6 +91,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   const agentMotion = win.props.agentMotion as AgentMotion | undefined;
   const [agentExpanded, setAgentExpanded] = useState(false);
   const toggleAgent=useCallback(()=>setAgentExpanded(v=>!v),[]);
+  const shellRef=useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   useEffect(() => { setAgentExpanded(!!agentView?.revealed); }, [agentView?.planId, agentView?.revealed]);
@@ -110,7 +103,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
 
   // ── focus / depth pull ────────────────────────────────────────────────────
   const onPointerDownCapture = (e: RPE) => {
-    if (e.button !== 0 || (e.target as HTMLElement).closest(".agent-anchor,[data-agent-result],[data-reveal-handle]")) return;
+    if (e.button !== 0 || (e.target as HTMLElement).closest(".agent-anchor,[data-agent-result],[data-reveal-handle],[data-capsule-id]")) return;
     if (win.depth > 0.05 && !e.altKey) {
       if (win.group?.startsWith('trail')) rerankTrail(kernel, win.group, win.id, 'trail:pull');
       else {
@@ -128,12 +121,14 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     e.preventDefault();
     const sx = e.clientX;
     const sy = e.clientY;
-    let members = [win];
-    if (tech.fusion && win.group && !capsule) {
-      if (e.shiftKey) {
+    cancelSurfaceInteraction();
+    const current=kernel.get(win.id)??win;
+    let members = [current];
+    if ((tech.fusion||isSurfaceGroup(current.group)) && current.group && !capsule) {
+      if (e.shiftKey&&!isSurfaceGroup(current.group)) {
         kernel.setGroup(win.id, undefined);
         log({ src: 'technique', type: 'fusion', windowId: win.id, data: { op: 'detach' } });
-      } else members = kernel.list().filter((w) => w.group === win.group && w.form === 'normal' && !w.minimized);
+      } else members = kernel.list().filter((w) => w.group === current.group && w.form === 'normal' && (isSurfaceGroup(current.group)||!w.minimized));
     }
     const starts = members.map((m) => ({ id: m.id, r: { ...m.rect } }));
     const cap0 = { ...rect };
@@ -147,10 +142,13 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
       const dx = ev.clientX - sx;
       const dy = ev.clientY - sy;
       if (capsule) {
+    if(dockParent(win)&&kernel.get(dockParent(win)!))return null;
         kernel.setCapsuleRect(win.id, { ...cap0, x: cap0.x + dx, y: Math.max(MENUBAR, cap0.y + dy) });
         return;
       }
       for (const s of starts) material?.update(s.id, { ...s.r, x: s.r.x + dx, y: Math.max(MENUBAR, s.r.y + dy) });
+      previewCapsuleDrop(starts.map(s=>s.id),ev.clientX,ev.clientY);
+      if(members.length===1&&!capsuleDropUi.get().target)previewSurfaceFusion(win.id);else previewSurfaceFusion(null);
       if (tech.snap && members.length === 1) {
         snap = snapTarget(ev.clientX, ev.clientY);
         ui.set({ snapPreview: snap });
@@ -160,8 +158,12 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('blur',up);
+      if(material?.stopped){previewCapsuleDrop([]);previewSurfaceFusion(null);ui.set({activeId:null,snapPreview:null});return;}
       if (snap){if(material)material.update(win.id,snap);else kernel.setRect(win.id, snap, 'user', 'snap');}
-      if(material)material.finish();else kernel.endGesture();
+      const drop=capsuleDropUi.get().target;previewCapsuleDrop([]);
+      const fusion=surfaceUi.get().candidate;
+      if(material&&drop){material.handoff();previewSurfaceFusion(null);finishCapsuleDrop(starts.map(s=>s.id),drop,true);}
+      else if(material&&fusion?.a===win.id&&!snap){material.handoff();fuseSurfaces(win.id,fusion.b,true);}else{previewSurfaceFusion(null);if(material)material.finish();else kernel.endGesture();}
       ui.set({ activeId: null, snapPreview: null });
     };
     window.addEventListener('pointermove', move);
@@ -176,12 +178,13 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     kernel.focus(win.id);
     const sx = e.clientX;
     const sy = e.clientY;
-    const r0 = { ...win.rect };
-    const minW = win.appId === 'refimage' || win.appId === 'tile' ? 120 : 260;
-    const minH = win.appId === 'refimage' || win.appId === 'tile' ? 90 : 170;
-    cancelCapsuleMotion();cancelManualWindowMotion();
+    const minW=64;
+    const minH=42;
+    cancelSurfaceInteraction();cancelCapsuleMotion();cancelManualWindowMotion();
+    const r0={...(kernel.get(win.id)??win).rect};
     kernel.beginGesture('resize');
-    const material=beginWindowMotion([win.id],'resize',{x:e.clientX,y:e.clientY},true);
+    const resizeBase=kernel.getState(),resizeIds=isSurfaceGroup(win.group)?surfaceComponent(resizeBase,win.id):[win.id];
+    const material=beginWindowMotion(resizeIds,'resize',{x:e.clientX,y:e.clientY},true);
     ui.set({ activeId: win.id });
     const move = (ev: PointerEvent) => {
       if(material?.stopped)return;
@@ -198,13 +201,19 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
         r.h = Math.max(minH, r0.h - dy);
         r.y = Math.max(MENUBAR, r0.y + r0.h - r.h);
       }
-      material.update(win.id,r);
+      for(const [id,rect] of attachedResize(resizeBase,win.id,r))material.update(id,rect);
+      kernel.setProps(win.id,{agentCollapsePreview:r.w<160&&r.h<110});
+      previewCapsuleDrop(resizeIds,ev.clientX,ev.clientY);
     };
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('blur',up);
-      material.finish();
+      if(material.stopped){previewCapsuleDrop([]);ui.set({activeId:null});return;}
+      const current=kernel.get(win.id),drop=capsuleDropUi.get().target;previewCapsuleDrop([]);
+      if(drop){material.handoff();kernel.setProps(win.id,{agentCollapsePreview:undefined});finishCapsuleDrop(resizeIds,drop,true);}
+      else if(current&&current.rect.w<160&&current.rect.h<110){material.handoff();kernel.setProps(win.id,{agentCollapsePreview:undefined});packWindows(resizeIds,true,resizeBase);}
+      else {kernel.setProps(win.id,{agentCollapsePreview:undefined});material.finish();}
       ui.set({ activeId: null });
     };
     window.addEventListener('pointermove', move);
@@ -288,7 +297,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     transform: `translate(${dx}px, ${dy}px) scale(${s})`,
     opacity: ghost ? 0.42 : ds.opacity,
     filter: ds.filter,
-    ...(agentMotion||win.props.agentCapsuleBusy ? { transition: 'none' } : {}),
+    ...(agentMotion||win.props.agentCapsuleBusy||win.props.surfaceAnimating ? { transition: 'none' } : {}),
     ['--r' as string]: `${visual.radius}px`,
   };
   const shellStyle: React.CSSProperties = visual.yieldScale
@@ -334,6 +343,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
 
   const cls = [
     'aw-win',
+    win.props.agentCollapsePreview?'aw-collapse-preview':'',
     focused ? 'focused' : '',
     active ? 'active' : '',
     clip ? 'clipped' : '',
@@ -344,7 +354,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     visual.dented ? 'dented' : '',
     def?.bare ? 'bare' : '',
     alert ? 'alert' : '',
-    win.group && tech.fusion ? 'grouped' : '',
+    win.group && (tech.fusion||isSurfaceGroup(win.group)) ? 'grouped' : '',
     agentView ? 'agent-attached' : '',
     revealed ? 'agent-revealed' : '',
   ].join(' ');
@@ -354,9 +364,9 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   const stableStartMove=useCallback((e:RPE)=>moveRef.current(e),[]);
   const resizeHandles=useMemo(()=>EDGES.map(edge=><div key={edge} className={`rz rz-${edge}`} onPointerDown={e=>resizeRef.current(edge)(e)}/>),[]);
   const titleBar=useMemo(()=>(
-          <div className="aw-title" onPointerDown={stableStartMove} onDoubleClick={e => maximizeWithMotion(win.id, workArea(),{x:e.clientX,y:e.clientY})}>
+          <div className="aw-title" tabIndex={0} aria-label={`窗口标题栏：${win.title}`} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setMenuAt({x:e.clientX,y:e.clientY});}} onKeyDown={e=>{if(e.shiftKey&&e.key==='F10'){e.preventDefault();const r=e.currentTarget.getBoundingClientRect();setMenuAt({x:r.x+80,y:r.y+25});}}} onPointerDown={stableStartMove} onDoubleClick={e => maximizeWithMotion(win.id, workArea(),{x:e.clientX,y:e.clientY})}>
             <div className="lights">
-              <button className="l close" onClick={() => kernel.close(win.id)} />
+              <button className="l close" onClick={() => {cancelSurfaceInteraction();kernel.close(win.id);}} />
               <button className="l min" onClick={() => kernel.minimize(win.id)} />
               <button className="l max" onClick={e => maximizeWithMotion(win.id, workArea(),{x:e.clientX,y:e.clientY})} />
             </div>
@@ -364,55 +374,12 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
               <AppIcon appId={win.appId} size={14} />
               {branchPayload?.parentSnapshot?<span className="agent-title-layers"><span style={{opacity:'calc(1 - var(--agent-title-mix, 1))'}}>{branchPayload.parentSnapshot.title}</span><span style={{opacity:'var(--agent-title-mix, 1)'}}>{win.title}</span></span>:win.title}
             </div>
-            <div className="tb-right">
-              {tech.fusion && (
-                <button
-                  className={`tb-btn ${win.group ? 'on' : ''}`}
-                  title={win.group ? 'Unfuse from group' : 'Fuse with nearest window'}
-                  onClick={() => {
-                    if (win.group) kernel.setGroup(win.id, undefined);
-                    else {
-                      const p = nearestPartner(kernel.get(win.id)??win);
-                      if (!p) return;
-                      const g = p.group ?? `fuse-${p.id}`;
-                      kernel.apply([{ windowId: p.id, group: g }, { windowId: win.id, group: g }], 'user', 'fuse');
-                    }
-                    log({ src: 'technique', type: 'fusion', windowId: win.id, data: { op: win.group ? 'unfuse' : 'fuse' } });
-                  }}
-                >
-                  ⧉
-                </button>
-              )}
-              {tech.periphery && def?.peripheral && (
-                <button
-                  className="tb-btn"
-                  title="Collapse to peripheral capsule"
-                  onClick={() => {
-                    const W = workArea();
-                    const n = kernel.list().filter((w) => w.form === 'capsule').length;
-                    kernel.setForm(win.id, 'capsule', 'user', win.capsuleRect ?? { x: W.x + W.w - 300, y: W.y + 4 + n * 184, w: 292, h: 172 });
-                  }}
-                >
-                  ◐
-                </button>
-              )}
-              {tech.depth && (
-                <button
-                  className="tb-btn"
-                  title="Push back in depth (⌥+scroll)"
-                  onClick={() => {
-                    kernel.setDepth(win.id, win.depth + 0.35);
-                    log({ src: 'technique', type: 'depth', windowId: win.id, data: { op: 'push' } });
-                  }}
-                >
-                  ⇣
-                </button>
-              )}
-            </div>
+            <DockedCapsules parentId={win.id}/>
           </div>
   ),[win.id,win.appId,win.title,win.group,win.capsuleRect,tech,def?.peripheral,branchPayload?.parentSnapshot?.title,stableStartMove]);
 
   if (capsule) {
+    if(dockParent(win)&&kernel.get(dockParent(win)!))return null;
     if (sessionCapsule) return <div className={`${cls} task-session`} style={outerStyle} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive}><SessionCapsule id={win.id} snapshot={sessionCapsule} mergedCount={queue?.mergedCount} incoming={queue?.incoming}/></div>;
     return (
       <div className={cls} style={outerStyle} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive} onPointerDownCapture={onPointerDownCapture} onWheel={onWheel}>
@@ -440,10 +407,11 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     </div>,document.body):null;
   const capsuleGhost=reentry?.source&&reentry.rect&&reentry.amount<.65?createPortal(<div className="agent-queue-receiver task-session" style={{position:'fixed',left:reentry.rect.x,top:reentry.rect.y,width:reentry.rect.w,height:reentry.rect.h,zIndex:visual.zIndex,opacity:1-motionEase(reentry.amount/.4),pointerEvents:'none'}} aria-hidden="true"><SessionCapsule id={win.id} snapshot={reentry.source}/></div>,document.body):null;
   return (
-    <>{receiver}{capsuleGhost}<div className={cls} style={{ ...outerStyle, ['--agent-title-mix' as string]:titleMix, ['--agent-panel-w' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32)))}px`, ['--agent-reveal' as string]: revealProgress, ['--agent-peel-width' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32))) * revealProgress}px`, ['--agent-peel-height' as string]: `${win.rect.h * .45 * revealProgress}px` }} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive} onPointerDownCapture={onPointerDownCapture} onPointerDown={onAltCorner} onWheel={onWheel}>
+    <>{menuAt&&<WindowMenu id={win.id} x={menuAt.x} y={menuAt.y} onClose={closeMenu}/>} {receiver}{capsuleGhost}<div className={cls} style={{ ...outerStyle, ['--agent-title-mix' as string]:titleMix, ['--agent-panel-w' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32)))}px`, ['--agent-reveal' as string]: revealProgress, ['--agent-peel-width' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32))) * revealProgress}px`, ['--agent-peel-height' as string]: `${win.rect.h * .45 * revealProgress}px` }} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive} onPointerDownCapture={onPointerDownCapture} onPointerDown={onAltCorner} onWheel={onWheel}>
+      {!!win.props.agentCollapsePreview&&<div className="collapse-hint">松开收为胶囊</div>}
       {!!win.props.agentBond && <div className="agent-bond-skin" aria-hidden="true" />}
-      <div className="aw-shell" style={shellStyle} data-fluid-skin={deformation?"true":undefined}>
-        {deformation&&!revealed&&!visual.maskImage&&!visual.dented&&<div className="agent-fluid-material" aria-hidden="true"/>}
+      <div className="aw-shell" ref={shellRef} style={shellStyle} data-fluid-skin={deformation?"true":undefined}>
+        {(deformation||surfaceBonds(win).length>0)&&!revealed&&!visual.maskImage&&!visual.dented&&<div className="agent-fluid-material" aria-hidden="true"/>}
         {agentView && !agentView.revealed && <AgentAttachment view={agentView} motion={agentMotion} expanded={revealed} onToggle={toggleAgent} />}
         <div className="aw-body" style={bodyStyle} ref={bodyRef}>
           {titleBar}
@@ -454,6 +422,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
         {agentView?.revealed && <RevealSurface id={win.id} view={agentView} width={rect.w} height={rect.h} progress={revealProgress} closure={win.props.agentRevealClosure as RevealClosure|undefined} body={bodyRef} baseClip={clip}/>}
       </div>
 
+      {surfaceBonds(win).length>0&&<NativeBondSkin win={win} shell={shellRef} geometry={deformation} baseClip={undefined}/>}
       <TransportSkin width={rect.w} height={rect.h} motion={agentMotion}/>
       {deformation&&<FluidBoundary geometry={deformation} material={false}/>}
 

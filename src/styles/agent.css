@@ -1024,3 +1024,39 @@
 /* A peeled corner must also release its old rectangular frame and shadow. */
 .production-desktop .aw-win.agent-revealed>.aw-shell{box-shadow:none;}
 .aw-win.agent-revealed::after{opacity:0!important;}
+
+.surface-fusion-layer{position:fixed;inset:0;z-index:800;overflow:visible;pointer-events:none;}
+.surface-tissue{fill:#f9fcff;fill-opacity:.92;stroke:none;}
+.surface-seam-hit{pointer-events:all;cursor:grab;outline:none;touch-action:none;}
+.surface-seam-hit:active{cursor:grabbing;}
+.surface-seam-hint{opacity:0;transition:opacity .15s;}
+.surface-seam:hover .surface-seam-hint,.surface-seam:focus-within .surface-seam-hint,.surface-seam.separating .surface-seam-hint{opacity:1;}
+.surface-seam-hint rect,.surface-fusion-preview rect{fill:#fffffff2;stroke:#e5f2f8;stroke-width:1;}
+.surface-seam-hint text,.surface-fusion-preview text{font:11px -apple-system,BlinkMacSystemFont,sans-serif;fill:#415b6b;}
+.iridescent-cursor{filter:drop-shadow(0 0 .65px #fff) drop-shadow(0 1px 1.6px #243d4b99);}
+.aw-win .agent-fluid-material{inset:-24px;}
+.iridescent-cursor{z-index:2147483600;overflow:visible;filter:drop-shadow(0 0 .6px #fff) drop-shadow(0 1px 1.2px #40525c55);}
+.iridescent-cursor svg{overflow:visible;}
+.iridescent-cursor[data-kind="ns"] svg,.iridescent-cursor[data-kind="nwse"] svg,.iridescent-cursor[data-kind="nesw"] svg{transform-origin:14px 14px;}
+.agent-front{z-index:2147483500;}
+.window-context-menu{position:fixed;z-index:12000;width:210px;padding:7px;background:#fffffff5;border:1px solid #e0e9ee;border-radius:13px;box-shadow:0 10px 35px #314b6b24;backdrop-filter:blur(15px);}
+.window-context-menu small{display:block;padding:5px 9px 8px;color:#87939f;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.window-context-menu button{display:block;width:100%;padding:9px 10px;text-align:left;border-radius:8px;color:#395061;font-size:12px;}
+.window-context-menu button:hover{background:#e9f1f5;}.window-context-menu button:disabled{opacity:.4;}
+.window-menu-divider{height:1px;background:#dbe5eb;margin:4px 8px;}
+.window-docked-capsules{position:absolute;right:10px;top:9px;max-width:43%;display:flex;gap:5px;overflow:hidden;z-index:3;}
+.docked-capsule{position:relative;flex-shrink:0;width:78px;height:24px;overflow:hidden;border:1px solid #fff;border-radius:15px;background:#f5fbffd9;box-shadow:0 0 6px #f1fbffd9,inset 0 0 8px #d6e8ed66;cursor:grab;touch-action:none;}
+.docked-capsule span{position:relative;z-index:1;display:block;text-align:center;font-size:10px;line-height:22px;color:#587180;}
+.docked-capsule .capsule-inner-tide{opacity:.6;}
+.titlebar-capsule-drop{position:absolute;inset:2px 3px;z-index:2;border-radius:19px;background:linear-gradient(100deg,#f5ffff55,#e9f8ffb0,#fef5f899);text-align:right;padding-right:16px;line-height:35px;font-size:11px;color:#587484;pointer-events:none;}
+.docked-capsule-peek{position:fixed;z-index:12010;display:flex;flex-direction:column;gap:7px;max-width:250px;padding:13px 16px;background:#fffffff5;border:1px solid #e4edf0;border-radius:13px;box-shadow:0 7px 25px #3552731c;pointer-events:none;color:#455e6e;font-size:11px;}
+.docked-capsule-peek span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.docked-capsule-peek small{opacity:.6;}
+.capsule-accepting{box-shadow:0 0 18px #d9f5ff,inset 0 0 12px #fff!important;}
+.nested-capsule-preview{width:470px;height:320px;position:relative;background:#f4fbff;border-radius:110px;display:flex;align-items:center;justify-content:center;gap:25px;color:#67808e;}
+.nested-capsule-preview b{font-size:80px;font-weight:300;}.nested-capsule-preview span{font-size:35px;}
+.aw-collapse-preview .aw-content{opacity:.08;}.aw-content{transition:opacity .15s;}
+.collapse-hint{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);white-space:nowrap;background:#fffffff0;color:#587281;padding:6px 11px;border-radius:13px;font-size:11px;pointer-events:none;}
+.session-capsule .window-docked-capsules{top:4px;right:7px;max-width:62%;}
+.session-capsule .docked-capsule{width:55px;height:19px;}.session-capsule .docked-capsule span{font-size:8px;line-height:17px;}
+.aw-win .agent-fluid-material{inset:-32px;}
+.session-capsule.capsule-busy>.window-docked-capsules,.session-capsule.capsule-receiving>.window-docked-capsules{pointer-events:none;}

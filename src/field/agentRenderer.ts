@@ -340,9 +340,14 @@ vec3 laneDensity(float density){
  return density*(vec3(.82)+variation*chroma);
 }
 vec3 spectrum(float t){return laneColor()*(.97+.03*sin(t));}
+float cursorEdgeDistance(vec2 p){
+ vec2 edges[7]=vec2[7](vec2(0,0),vec2(1,22),vec2(7,16),vec2(11,25),vec2(15,23),vec2(11,15),vec2(21,14));
+ float nearest=1000.;
+ for(int i=0;i<7;i++){vec2 a=edges[i],b=edges[(i+1)%7],d=b-a;float q=clamp(dot(p-a,d)/max(.001,dot(d,d)),0.,1.);nearest=min(nearest,length(p-a-d*q));}
+ return nearest;
+}
 vec3 cursorInk(float phase){
- float p=mod(phase,4.);vec3 red=vec3(.46,.075,.12);
- return p<2.?mix(red,vec3(.49,.34,.055),1.-abs(p-1.)):mix(red,vec3(.07,.19,.45),1.-abs(p-3.));
+ return mix(vec3(.28,.41,.36),vec3(.54,.29,.42),.5+.5*sin(phase*1.7));
 }
 vec2 livingField(vec2 p,float gesture,float action,float extent,float seed){
   vec2 c=uHost.xy+uHost.zw*.5;
@@ -391,9 +396,14 @@ vec2 livingField(vec2 p,float gesture,float action,float extent,float seed){
 void main(){
  // Bypass surface derivatives on the collapsed cursor fan, where triangles can be degenerate.
  if(uMode==0 && uMorph<.0001){
-  float edge=smoothstep(.70,.94,vUv.y);
+  float edge=1.-smoothstep(.55,1.8,cursorEdgeDistance(vPosition.xy-uOrigin));
   vec3 color=mix(vec3(1.),cursorInk(vUv.x*4.-uTime*.7),edge);
-  base=vec4(color,1.);emission=vec4(0.);return;
+  float distance=cursorEdgeDistance(vPosition.xy-uOrigin);
+  float aa=clamp(fwidth(distance),.24,1.0);
+  float coverage=smoothstep(-aa,aa,distance);
+  // Three donor sheets coincide in the cursor pose; preserve one anti-aliased silhouette.
+  float alpha=1.-pow(max(0.,1.-coverage),1./3.);
+  base=vec4(color*alpha,alpha);emission=vec4(0.);return;
  }
  if(uMode==2){
   float distance=motherSkin(vPosition.xy-uOrigin-vec2(38.,32.));
@@ -540,7 +550,7 @@ void main(){
  // Pearl highlights sit on a translucent absorptive body; broad bloom stays restrained.
  vec3 color=mix(vec3(1.),pigment,m);
  // The idle pointer has a dark, flowing outline. Those same vertices hatch into the core.
- float cursorEdge=smoothstep(.70,.94,vUv.y)*(1.-smoothstep(.02,.75,uMorph));
+ float cursorEdge=mix(1.-smoothstep(.55,1.8,cursorEdgeDistance(vPosition.xy-uOrigin)),smoothstep(.70,.94,vUv.y),smoothstep(.02,.18,uMorph))*(1.-smoothstep(.02,.75,uMorph));
  vec3 ink=cursorInk(vUv.x*4.-uTime*.7);
  if(uMode==0)color=mix(color,ink,cursorEdge);
  if(uMode==1){
@@ -802,7 +812,8 @@ export function createAgentRenderer(canvas: HTMLCanvasElement) {
   };
   return {
     render(s: EnergyScene, time: number, quality: number) {
-      const dpr = Math.min(devicePixelRatio || 1, quality);
+      const cursorOnly=s.morph<.12&&s.links.length===0;
+      const dpr = cursorOnly?Math.max(2,Math.min(devicePixelRatio||1,2.5)):Math.min(devicePixelRatio || 1, quality);
       const w = Math.round(innerWidth * dpr),
         h = Math.round(innerHeight * dpr);
       if (width !== w || height !== h) {

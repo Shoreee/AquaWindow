@@ -55,3 +55,13 @@
 手动包覆起点固定为按下时在窗口内的相对坐标，随着窗口移动保持附着；自动布局保留角落起点。手动包覆增加到约半秒再跟随，自动搬运用前 42% 工作阶段完成包覆，避免蔓延过快。
 
 修正：直接拖动和缩放不再等待包覆，也不进行位置插值；包覆与手势同步。只有自动搬运保留预包覆等待。边缘揭示的遮罩延伸出窗口上边和侧边，防止平滑封闭路径把角落翻揭误画成内部洞口。
+
+## Recursive capsules and native surface bonds
+
+Manual manipulation no longer hatches the energy core. The GPU cursor retains the same continuously morphing mesh, with a softer analytic outline and supersampling in its small idle state; vector text, hand and resize cursors use unclipped viewports.
+
+Surface fusion now deforms each page's actual contour, including soft terminal fillets. The shared seam has no painted bridge or glue body. Pulling less than the complete span rolls back the opening; complete traversal splits the graph into independently movable components. Undo restores the exact joined state.
+
+All collection routes use `PlanPerformance` and `SessionCapsule`. Normal windows can be inserted into capsules; capsules can be nested or attached to title bars, including a title-bar attachment whose parent is subsequently collected. Extraction preserves nested capsule types. The containment graph rejects cycles and preserves document identities and scroll positions. Shrinking a window below the collection threshold exposes a release-to-collect hint. Title-bar context actions replace the three former right-hand toolbar controls.
+
+Additional checks: `pnpm test:fusion`, `pnpm test:capsule-tree`, `pnpm test:cursor`. Regenerate the four README recordings with `pnpm capture:readme` against the production preview.

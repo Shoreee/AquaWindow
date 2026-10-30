@@ -1,3 +1,4 @@
+import {cancelSurfaceInteraction} from './surfaceFusion';
 import {credentialState} from '../agent/adaptive/credentials';
 import { memo, useEffect, useRef, useState } from "react";
 import { AppIcon } from "../apps/icons";
@@ -13,6 +14,7 @@ import { BASELINE } from "../techniques/techniques";
 import { bounded } from "../agent/adaptive/compiler";
 
 export function bootDesktop() {
+  cancelSurfaceInteraction();
   adaptation.cancel();
   kernel.closeAll();
   ui.set({

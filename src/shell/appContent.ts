@@ -1,6 +1,6 @@
 import type {WindowState} from '../kernel/types';
 
-const presentation=new Set(['agentMotion','agentQueue','agentDivision','agentView','agentBond','agentRevealProgress','agentRevealExit','agentRevealClosure','agentCapsule','agentRelease','agentReentry']);
+const presentation=new Set(['agentCollapsePreview','capsuleDock','agentCapsuleReceiving','surfaceAnimating','surfaceBonds','agentMotion','agentQueue','agentDivision','agentView','agentBond','agentRevealProgress','agentRevealExit','agentRevealClosure','agentCapsule','agentRelease','agentReentry']);
 /** Layout frames must not invalidate document trees. App edits and grouping remain live. */
 export function sameAppContent(a:WindowState,b:WindowState){
   if(a.id!==b.id||a.appId!==b.appId||a.title!==b.title||a.group!==b.group||a.role!==b.role||a.openedFrom!==b.openedFrom)return false;

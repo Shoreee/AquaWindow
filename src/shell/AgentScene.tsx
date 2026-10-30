@@ -132,9 +132,9 @@ function AgentSceneImpl() {
       else slow = Math.max(0, slow - 1);
       if (slow > 24) quality = 1;
       const s = adaptation.store.get(),manual=materialActivity.get(),
-        active = (s.phase !== "idle"&&s.phase!=="returning")||manual.active;
+        active = (s.phase !== "idle"&&s.phase!=="returning");
       const returningAge = Math.max(0, ...[...couplings.values()].map((c) => c.age * c.fade));
-      const target = active ? activationAt(now - (s.phase==="idle"&&manual.active?manual.startedAt:s.startedAt)) : smooth(returningAge / .65);
+      const target = active ? activationAt(now - s.startedAt) : smooth(returningAge / .65);
       // A critically damped spring changes the SAME vertices in both directions.
       for (let step = 0; step < 4; step++) {
         const h = dt / 4;
@@ -601,11 +601,11 @@ function AgentSceneImpl() {
         <svg width="28" height="32" viewBox="0 0 28 32">
           <defs>
             <linearGradient id="cursor-pearl" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#872239" />
-              <stop offset=".38" stopColor="#8c651e" />
-              <stop offset=".58" stopColor="#872239" />
-              <stop offset=".8" stopColor="#214980" />
-              <stop offset="1" stopColor="#872239" />
+              <stop offset="0" stopColor="#947382" />
+              <stop offset=".38" stopColor="#5e8176" />
+              <stop offset=".58" stopColor="#947382" />
+              <stop offset=".8" stopColor="#75858b" />
+              <stop offset="1" stopColor="#947382" />
               <animateTransform
                 attributeName="gradientTransform"
                 type="rotate"
@@ -620,7 +620,7 @@ function AgentSceneImpl() {
             d="M2 2 L3 24 L9 18 L13 27 L17 25 L12 17 L22 16 Z"
             fill="#fff"
             stroke="url(#cursor-pearl)"
-            strokeWidth="1.6"
+            strokeWidth="1.5"
           />
           <path
             className="cursor-ibeam"
@@ -641,7 +641,7 @@ function AgentSceneImpl() {
             d="M9 27C6 23 2 18 3 16C5 13 8 19 9 18V5C9 1 13 1 13 5V13C13 10 17 10 17 14C18 11 21 12 21 16C24 14 26 17 25 21L23 28Z"
             fill="#fff"
             stroke="url(#cursor-pearl)"
-            strokeWidth="1.6"
+            strokeWidth="1.5"
           />
         </svg>
       </div>

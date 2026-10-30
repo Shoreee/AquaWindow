@@ -20,7 +20,11 @@
     "test:capsule": "node scripts/capsule-e2e.mjs",
     "test:keys": "node scripts/key-e2e.mjs",
     "test:boundary": "node scripts/boundary-e2e.mjs",
-    "check:secrets": "node scripts/check-secrets.mjs"
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "test:fusion": "node scripts/fusion-e2e.mjs",
+    "capture:readme": "node scripts/capture-readme.mjs",
+    "test:capsule-tree": "node scripts/capsule-tree-e2e.mjs",
+    "test:cursor": "node scripts/cursor-e2e.mjs"
   },
   "dependencies": {
     "react": "^19.3.0",

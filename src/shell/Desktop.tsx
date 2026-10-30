@@ -1,3 +1,4 @@
+import {FusionLayer} from './FusionLayer';
 import { useEffect, useMemo, useState } from 'react';
 import { appState } from '../apps/state';
 import { FieldLayer, type FieldShape } from '../field/FieldLayer';
@@ -98,7 +99,7 @@ export function Desktop() {
       const v = visuals[id];
       const alert = mention && w.appId === 'meeting';
       let g = -1;
-      if (tech.fusion && w.group) {
+      if (tech.fusion && w.group && !w.group.startsWith('surface:')) {
         if (!groups.has(w.group)) groups.set(w.group, groups.size % 8);
         g = groups.get(w.group)!;
       }
@@ -133,6 +134,7 @@ export function Desktop() {
           );
         })}
       </div>
+      <FusionLayer state={state}/>
       {snap && <div className="snap-preview" style={{ left: snap.x, top: snap.y, width: snap.w, height: snap.h }} />}
       {xray && <div className="xray-hint">X-ray — front layers are see-through · release Space</div>}
       {development ? <><ProposalLayer /><ScenarioPanel /><MenuBar /><ControlCenter /><Dock /></> : <><SystemMenuBar /><SystemDock /></>}

@@ -1,6 +1,7 @@
+import {cancelSurfaceInteraction,surfaceBusy} from '../../shell/surfaceFusion';
 import {getSessionKey,setSessionKey} from './credentials';
 import {cancelManualWindowMotion,manualWindowMotionActive} from "./manualMotion";
-import {cancelCapsuleMotion,capsuleMotionActive,capsuleRectInside} from "./capsule";
+import {previewCapsuleDrop,cancelCapsuleMotion,capsuleMotionActive,capsuleRectInside} from "./capsule";
 import { kernel, workArea } from "../../system/kernel";
 import { bus } from "../../system/bus";
 import { createStore } from "../../system/createStore";
@@ -76,7 +77,7 @@ export function startAdaptiveRuntime() {
   let key = "";
   const tick = () => {
     if (document.hidden) return;
-    if (!adaptation.active&&!capsuleMotionActive()&&!manualWindowMotionActive()) {
+    if (!adaptation.active&&!capsuleMotionActive()&&!manualWindowMotionActive()&&!surfaceBusy()) {
       const ctx = context([]);
       if (ctx.key !== key) {
         key = ctx.key;
@@ -104,7 +105,9 @@ export function startAdaptiveRuntime() {
       'input,textarea,select,[contenteditable="true"],[role="textbox"]',
     );
   const down = (e: KeyboardEvent) => {
-    if(e.key==='Escape'&&manualWindowMotionActive()){cancelManualWindowMotion();if(kernel.canUndo())kernel.undo('user');e.preventDefault();e.stopImmediatePropagation();return;}
+    if(e.key==='Escape'&&document.querySelector('.window-context-menu'))return;
+    if((e.key==='Escape'||(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')&&cancelSurfaceInteraction()){e.preventDefault();e.stopImmediatePropagation();return;}
+    if(e.key==='Escape'&&manualWindowMotionActive()){cancelManualWindowMotion();previewCapsuleDrop([]);if(kernel.canUndo())kernel.undo('user');e.preventDefault();e.stopImmediatePropagation();return;}
     if(e.key==='Escape'&&cancelCapsuleMotion()){e.preventDefault();e.stopImmediatePropagation();return;}
     if(e.key==='Escape'&&!adaptation.active&&!editable(e.target)&&kernel.canUndo()){
       e.preventDefault();e.stopImmediatePropagation();kernel.undo('user');return;
@@ -140,7 +143,7 @@ export function startAdaptiveRuntime() {
       return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    if(capsuleMotionActive()||manualWindowMotionActive())return;
+    if(capsuleMotionActive()||manualWindowMotionActive()||surfaceBusy())return;
     if (!e.repeat) adaptation.press();
   };
   const up = (e: KeyboardEvent) => {

@@ -1,193 +1,184 @@
-# AquaWindow
+<h1 align="center">AquaWindow</h1>
+<p align="center"><strong>Soft boundaries for shared human–agent work</strong></p>
+<p align="center">Tongji University · College of Design and Innovation (D&amp;I)</p>
+<p align="center">
+  <a href="https://www.tongji.edu.cn/"><img src="https://img.shields.io/badge/Tongji-University-245879?style=flat-square" alt="Tongji University"></a>
+  <a href="https://www.tongji.edu.cn/"><img src="https://img.shields.io/badge/Tongji-D%26I-245879?style=flat-square" alt="Tongji D&I"></a>
+  <a href="https://github.com/Shoreee/AquaWindow/actions/workflows/pages.yml"><img src="https://github.com/Shoreee/AquaWindow/actions/workflows/pages.yml/badge.svg" alt="Build and deployment"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-586B7B?style=flat-square" alt="MIT license"></a>
+</p>
+<p align="center"><a href="https://shoreee.github.io/AquaWindow/">Try the live prototype</a> · <a href="#interaction-guide">Interaction guide</a> · <a href="#running-locally">Run locally</a></p>
 
-正式 demo 是一个浏览器虚拟桌面：直接打开论文、研究笔记和文件窗口，通过长按空格唤出自适应 Agent。旧研究原型保留为开发工具。
+AquaWindow explores how an AI collaborator might inhabit a desktop through its boundaries. Rather than introducing another panel, it treats windows as surfaces that can yield, reveal, carry context, join together, and separate again. The interface makes these changes tangible through a shared language of soft membranes, flowing white material, and restrained optical dispersion.
 
-## 启动正式 demo
+This is an interactive research prototype built in the browser. Its documents, files, and application windows form a simulated workspace, allowing the interaction language to be explored without granting control over the operating system.
+
+## Design philosophy
+
+**Boundaries are places to collaborate.** A window edge can make space for a task, expose an important region underneath, or hold a relationship to another window. Collaboration becomes part of the workspace rather than a separate destination.
+
+**Motion should explain causality.** An agent's material extends from its core, works on an object, and returns. A moving window is gradually enveloped in a membrane and released at its destination. The effect communicates what is acting, where it acts, and when the operation is complete.
+
+**People and agents share a material language.** A manual resize and an agent-driven boundary adjustment use the same flowing edge. Direct manipulation remains immediate: dragging never waits for the membrane to finish spreading. The cursor retains its continuous transformation into the agent core when the agent is explicitly summoned; ordinary manual actions do not summon it.
+
+**Connections should feel reversible.** Related windows can adhere along a living seam and travel together. Pulling along the seam opens the connection under tension. Releasing early lets it flow back; reaching the far end separates the surfaces. There are no zipper teeth or additional creature icons—the boundary itself carries the interaction.
+
+## In motion
+
+The GIFs below are recordings of the running prototype, not rendered concept animations. The current interface uses Chinese labels; the controls are described in English below.
+
+### From cursor to collaborator
+
+Hold Space to grow the cursor into the agent, choose objects, and explore adaptive layouts.
+
+![Continuous cursor-to-core transformation and adaptive previews](docs/figures/agent-interaction.gif)
+
+### A membrane that travels with the window
+
+The swallowing front spreads from the initial pointer location during manual movement. Automatic relocation begins at a corner and envelops the window before carrying it.
+
+![Immediate manual movement with slowly spreading material](docs/figures/manual-membrane.gif)
+
+### Related surfaces, shared movement
+
+Fuse related windows, move them as one group, then pull their seam apart. An incomplete pull returns to the joined state; a complete pull releases the windows.
+
+![Window fusion, partial separation and complete release](docs/figures/surface-fusion.gif)
+
+## Interaction guide
+
+| Input | Result |
+| --- | --- |
+| Hold **Space** | Grow the cursor into the agent and enter object selection. |
+| Click windows while holding Space, before the burst | Add or remove objects; each change resets the selection countdown. |
+| Make no selection | All eligible windows are selected when the countdown expires. |
+| **← / →** after the burst | Switch between seven independent candidates. Previews do not auto-cycle. |
+| Release **Space** | Accept the current candidate and let its animation complete. |
+| **Esc**, **⌘/Ctrl Z**, or the Undo prompt | Cancel or undo the operation. |
+| Drag a title bar or resize handle | Manipulate the actual window immediately, with shared membrane feedback. |
+| Move related edges close together and release | Preview and create a surface bond. |
+| Right-click a title bar, or press **Shift F10** on it | Open window actions: collect, fuse, move through depth, maximize, or close. |
+| Shrink a window to a small corner-sized surface, then release | Collect it into the same session capsule used by the agent. |
+| Drag either fused title bar | Move the joined windows together. |
+| Pull a seam from one end to the other | Separate only after reaching the end; otherwise it flows back. **End** provides keyboard completion. |
+
+### Seven adaptive candidates
+
+| Candidate | What changes |
+| --- | --- |
+| **Central reveal** | Open a rounded rectangular aperture in the upper surface to expose important content below, relocating it when useful. |
+| **Corner reveal** | Peel open an outside corner. Only the cut edge receives material feedback; the underlying page stays plain. |
+| **Yield** | Pull a boundary, with a one-sided travelling wave in its direction of motion. Adjacent edges can participate in a corner drag. |
+| **Encapsulate** | Gather windows sequentially into a compact, editable session capsule. |
+| **Branch** | Develop independent result windows from the original context through a soft division. |
+| **Merge** | Bring results together and join relevant working surfaces with a detachable liquid seam. |
+| **Permeate** | Move a surface through depth layers with a ripple-like transition. |
+
+Anchoring remains the underlying selection relationship rather than occupying an extra layout candidate. Both reveal forms can be closed by dragging their exposed boundary.
+
+### Session capsules
+
+Capsules retain the actual pages, document identity, and reading position. Each incoming page adds a segment and increases the capsule's capacity.
+
+- Hover a segment to identify its page by title.
+- Drag another window or capsule onto the capsule to add it with a flowing ingress animation.
+- Drop a capsule onto a window title bar to make it an attachment; drag it back out to detach it.
+- Capsules can contain capsules or accompany other capsules. Nested extraction preserves the inner container and its pages; circular containment is rejected.
+- Drag or resize the capsule; page previews hide during manipulation.
+- **Option/Alt-drag** a segment to release just that page, including the original host page.
+- Stretch the capsule beyond its capacity to release the pages in sequence, or use its release button.
+- Undo restores the preceding session state.
+
+### Capsules as recursive context
+
+A small container can accompany a working window in its title bar. Collecting that window preserves the attachment, and containers can themselves be nested. Ingress, undocking, and release use the same membrane language as collection.
+
+![Collecting, title-bar docking, adding pages and nesting capsules](docs/figures/recursive-capsules.gif)
+
+## Running locally
+
+Use a current Node.js LTS release and pnpm 9 or later.
 
 ```bash
 pnpm install
+pnpm dev
+```
+
+Open the Vite URL printed in the terminal, normally `http://localhost:5173`. Development also starts the optional local agent service on port `8787`. No API key is needed for the deterministic local previews.
+
+To run the production build locally:
+
+```bash
+pnpm build
+pnpm start
+```
+
+Open `http://127.0.0.1:8787`. GitHub Pages serves the browser build directly.
+
+## Optional DeepSeek integration
+
+DeepSeek is **off by default**. Open **AquaWindow** in the top-left menu, enter an API key, save it, and explicitly enable the provider. Saving a key alone does not start requests.
+
+A visitor's key stays in the current page's memory. It is not written to localStorage, sessionStorage, the repository, or build artifacts, and it is cleared on reload. Requests with a page-entered key go directly to the official DeepSeek HTTPS endpoint. Clearing or replacing the key disables access and aborts outstanding work. Enabling the provider sends the current workspace context for candidate generation.
+
+For local development, a server-side key can alternatively be configured in the ignored environment file:
+
+```bash
 cp .env.example .env.local
-# 可选：也可以在左上角直接填写当前页面使用的 DeepSeek API Key
-pnpm dev
+# Set DEEPSEEK_API_KEY locally; never use a VITE_ prefix for a secret.
 ```
 
-打开 <http://localhost:5173>。`pnpm dev` 同时启动 Vite 和本地 Agent 服务（默认 8787）；密钥仅由服务端读取。`DEEPSEEK_MODEL` 默认 `deepseek-flash`。构建后使用 `pnpm build && pnpm start`，打开 <http://127.0.0.1:8787>。
+Server-mode replay traces are stored under the ignored `log/` directory. Page-entered keys are not written into those traces. The publication workflow scans source files and build artifacts for credentials before deployment.
 
-| 操作 | 行为 |
-| --- | --- |
-| 长按空格 | 鼠标展开，持续蓄能；2.5 秒后呈现候选 |
-| 按住时点击窗口 | 选中/取消主体，并重置 2.5 秒计时 |
-| 按住时点击空白 | 清空选择，进行全局适应 |
-| 持续按住 | 每 2.4 秒切换候选 |
-| 松手 / 再按空格 | 冻结方案 / 确认方案 |
-| Esc | 恢复本轮唤出前的布局和结果 |
-| ⌘/Ctrl Z | 撤销已确认的整体布局 |
-| 点击会话胶囊 | 恢复窗口、阅读位置与会话 |
+## Implementation
 
-默认使用本地规则，不请求模型：并排摆放任务与参考窗口、将主窗口居中并让关联窗口移到两侧，或收纳为会话。左上角 **AquaWindow → 接入 DeepSeek** 是本次页面会话的开关，默认关闭；只有打开后才允许真实模型请求，关闭会中止队列与在途请求。本地结果引用实际来源，不生成研究结论。
+The interface combines native DOM documents with a WebGL material layer. Window movement and shape changes affect actual layout state, while the flowing core and donated ribbons share a continuous material model. The body is clipped with lightweight vector contours rather than a full-window raster displacement filter.
 
-开启 DeepSeek 后，模型在语义上下文稳定后后台预计算，缓存 30 秒内新鲜，60 秒后失效。首次预热取决于 API 响应；手势触发后没有有效缓存时最多额外等 3 秒，再收回重试。实验奖励接口位于 `src/agent/adaptive/types.ts`，默认未配置，当前使用模型排序。
+```text
+src/
+  kernel/              Window state, gestures, history, and undo
+  agent/adaptive/      Context, local candidates, provider access, and choreography
+  field/               WebGL core, material flow, and ribbon rendering
+  shell/               Desktop, window surfaces, capsules, and tension seams
+  apps/                Simulated applications and document state
+  techniques/          Compositing, depth, reveal, and layout geometry
+server/                Optional local provider service and trace recording
+scripts/               Browser regression checks and demo capture
+```
 
-## DeepSeek 复盘日志
+`AgentMotion` is the shared contract between layout choreography and visible material response. Surface bonds deform the actual window silhouettes rather than drawing a bridge over them. They live alongside the windows, so moving, closing, undoing, or separating a group operates on the same underlying state. Document trees are memoized independently of presentation frames to preserve editing and avoid re-rendering text during animation.
 
-每次真实模型调用写入 `log/YYYY-MM-DD/<请求 ID>.json`（目录日期使用上海时区）。文件包含完整输入（提示词、上下文、模型参数）、原始输出、校验结果、耗时和错误。首次写入状态为 `pending`，结束后原子更新为 `complete` 或 `error`。Authorization 和 API key 不写入日志，`log/` 已加入 Git 忽略。
-
-## 验证与开发工具
+## Validation and contribution
 
 ```bash
-pnpm test
 pnpm typecheck
-node scripts/local-adaptive-e2e.mjs # 本地模式、定制鼠标、移位与条带抽取/恢复
-pnpm build
-# 先运行 pnpm dev；默认测试地址为 127.0.0.1:5174
-AW_URL=http://127.0.0.1:5173/ pnpm test:e2e
-```
-
-浏览器测试用确定性 API 测试响应覆盖交互，不消耗模型调用；截图、录像和帧率记录位于 `screenshots/qa/`。录像需要 `pnpm exec playwright-core install ffmpeg`。真实 API 不会使用测试响应兜底。
-
-开发模式下通过 `?dev=1` 打开旧研究工具；递归桌面仍可使用 Ctrl+Shift+R。下面保留研究原型说明与原始研究材料。
-
-<details>
-<summary>研究原型说明</summary>
-
-一个用来研究 **agent 协商的流体窗口布局** 的伪操作系统桌面。它不是操作系统，也不是又一个平铺窗口管理器：窗口在这里是一块块可以变形、融合、退到深处的**领地**，而领地的边界是人和布局 agent 谈判的地方。
-
-Agent 从不直接改窗口。它只提交 `LayoutProposal`。人在自主度旋钮允许的范围内接受、部分接受、拒绝，或者让它先做、再用一次撤销收回。
-
-![AquaWindow 桌面](docs/figures/guide.png)
-
-## 这个项目在问什么
-
-现有桌面把窗口当成平面上的刚性矩形，遮挡是用户自己的事，系统能给的自动帮助基本只有「平铺」和「最小化」。三件事因此没被好好问过：
-
-1. **形状。** 连续的边界变化（被压到时凹陷、相邻时融合）是否比把整个窗口等比缩小更能让多块内容同时可读？
-2. **Agent。** 布局 agent 比规则和数值优化多出来的是什么？纯多目标优化很容易得到「数学上更优、人看起来很怪」的结果，因为它不知道哪扇窗是草稿、哪扇是随手一瞥的资料、人刚把东西放在哪。
-3. **深度。** 现有 GUI 几乎全是二维平面。把 z 当成可操作的一维（推远、按住空格看穿、沿深度排列浏览路径）而不是仅仅作为叠放顺序，能不能用？
-
-场景只规定任务、窗口内容、初始位置、遮挡和目标，不规定解法。每种解法是一组可切换的交互技术加一个可选的 agent，方便对照。
-
-## 五种任务
-
-| | 场景 | 困难在哪 | 桌面上可以对照的做法 |
-| --- | --- | --- | --- |
-| 1 | 文件去哪了 | Downloads 里全是 `2403.11872.pdf` 这种编号；coding agent 把草稿散落到好几个目录 | 普通 Finder / 语义透镜 / 来源与日志互链 / agent 提议 |
-| 2 | 边写边看 | 要抄的表格正好压在正在写的段落下面；wiki 越点页面越多 | 重叠 / 掀角回看 / 重要区域透出 / 流体让位 / 缩放对照 / 深度轨迹 / agent |
-| 3 | 开会还想干别的 | 发言人和共享屏幕是两个窗口；笔记和消息会把会议埋掉，点名容易错过 | 分开的窗口 / 融合 / 周边胶囊 / 深度 / agent 维持感知 |
-| 4 | 边看教程边操作 | 视频要够大才看得清，但每一步的控件在软件的不同位置，视频正好挡住 | 自己摆 / 幽灵穿透 / 流体让位 / 知道步骤的 agent |
-| 5 | 设计时看很多参考 | 参考图又小又多，压在画布上挡住笔触，放到后面又找不到 | 浮动窗口 / 按用途融合成板 / 深度层 / agent 对照纯优化器 |
-
-从菜单 **Scenario** 进入，或打开 `http://localhost:5173/?s=glance&st=D` 这类链接（`s` 是场景，`st` 是方案字母）。
-
-## 交互技术从哪来
-
-这些不是装饰，每一项都能单独开关（菜单 **Techniques**，或右上角控制中心），研究条件只是它们的预设。
-
-- **掀角。** 抓住窗口角上的折页往里翻，松手弹回，按住 Shift 再松手可以钉住。来自 Beaudouin-Lafon, *Novel Interaction Techniques for Overlapping Windows*, UIST 2001。
-- **重要区域透出。** 被挡住的窗口里真正要紧的区域（表格、图、正在写的段落）从上面那扇窗不重要的部分透出来，上面窗口自己的标题栏和重点不会被挖掉。沿着 Waldner 等人 *Importance-Driven Compositing Window Management*（CHI 2011）的合成思路。
-- **非矩形领地。** 窗口表皮是超椭圆（squircle）的零等值面。聚焦的窗口压上来时，下面的窗口边界局部退让，内容不缩放。重叠太深、退让会把窗口吃成一条时，退回普通遮挡，改由 agent 决定要不要挪位置。对照条件是「整窗缩进空隙里」。这一支接 *Interactive Visual Workspaces with Dynamic Foveal Areas and Adaptive Composite Interfaces*（Computer Graphics Forum / Eurographics 2007）里对非矩形工作区的讨论，也参考 DuoZone 一类按区域自适应摆放的想法，但把自适应从「算出一个新矩形」换成「边界本身在谈判」。
-- **融合。** 同一组的窗口在 WebGL 里做平滑并集，连成一块液态领地，一起移动；Shift 拖拽把一扇拆出去。分组感来自格式塔的连通性，而不是再画一个框。
-- **周边胶囊。** 会议可以收成角落里仍在更新的小胶囊（说话的人、字幕、页码）。思路接近 Robertson 等人的 Scalable Fabric：离开焦点但不离开视野。
-- **深度。** `⌥` 加滚轮把窗口推进或拉回 z；按住空格，前面的层变透明（x-ray）；wiki 的链接可以开成一条由近到远的轨迹，再滚轮沿轨迹走。深度是布局的一维，最小化仍然是「拿走」。
-
-![被压住的窗口边界退让，内容保持原比例](docs/figures/yield.png)
-
-![掀起一角看下面的表格](docs/figures/peel.png)
-
-![会议收进周边：字幕、幻灯片和发言人还在](docs/figures/periphery.png)
-
-## Agent 为什么不是一个优化器
-
-两套求解器走同一个搜索（模拟退火），差别只在目标函数：
-
-- **math** 只惩罚重叠、奖励铺满屏幕。它经常把窗口传到屏幕另一头、压扁长宽比、对调左右。
-- **human** 在同一套几何上加上人的先验：刚在用的那扇不动、离原位置近、保持长宽比和左右顺序、参考资料挨着它支撑的主窗口、重要区域不被盖住。
-
-两者的差距就是「怪」的来源，Layout Lab（Dock 里的柱状图图标）会把当前桌面解两次并列出位移、长宽比扭曲、顺序对调和 strangeness。Agent 方案可以预览到桌面上，和规则提议走同一套接受 / 拒绝。
-
-规则 agent 读的是行为和语义，不是只读矩形：短时间在两扇窗之间来回，看成「瞥一眼」而不是「换任务」，于是提议把资料并到草稿旁边；会议被盖住一段时间，收成胶囊；字幕里点到你的名字，再把会议拉回玻璃面；教程的当前步骤对应哪个控件，就把视频挪到对面并保持看得清的尺寸；参考图按 palette / form / texture / light 收成两列。每条提议都带着理由、证据和置信度。置信度会因你拒绝过这一类而下降。
-
-提议可以按窗口部分接受。自主度四档：Off、Suggest（只有一条小提示）、Preview（原位虚线幽灵）、Auto+Undo（先做，toast 上一次撤销）。
-
-后期换成 LLM / VLM 时不改这套协议。设置 `VITE_AGENT_ENDPOINT`（见 `.env.example`）后，控制中心里可以把策略换成 Rules + LLM 或只走远端。远端收到的是一份压缩过的观察 JSON，返回的提案会先做校验（未知窗口丢掉、矩形夹在工作区内、边长有下限），再进入同一个自主度闸门。系统提示词在 `src/agent/llm.ts`。
-
-![提案：理由、证据、可以只接受其中几扇窗](docs/figures/proposals.png)
-
-## 架构
-
-内核是纯 TypeScript，不引用 React，也不引用 agent。上面的东西只通过命令改状态。
-
-```
-src/kernel       窗口状态、命令、撤销
-src/field        超椭圆 / SDF、退让轮廓、WebGL 融合场
-src/techniques   各项交互技术，以及「给定技术和状态，每扇窗长什么样」
-src/agent        观察、规则、优化器、LLM 适配、协商控制器
-src/apps         模拟的 Finder、论文、写作、wiki、会议、教程、画布、终端
-src/scenarios    五个场景：只描述问题，方案是技术开关的预设
-src/shell        菜单栏、Dock、窗口、提案卡片、研究台
-src/study        JSONL 日志
-```
-
-研究台用反引号 `` ` `` 打开：条件、参与者编号、每条规则的接受 / 部分接受 / 拒绝次数、原始日志，以及导出 JSONL。
-
-## 运行
-
-线上演示：<https://shoreee.github.io/AquaWindow/>
-
-需要 Node 20+ 和 pnpm。
-
-```bash
-pnpm install
-pnpm dev
-```
-
-打开 <http://localhost:5173>。
-
-| 操作 | |
-| --- | --- |
-| 拖标题栏 | 移动；融合组一起动 |
-| Shift + 拖 | 从融合组里拆出 |
-| 边缘拖拽 | 缩放 |
-| 角上折页，或 ⌥ + 拖角落 | 掀角；Shift 松手钉住 |
-| ⌥ + 滚轮 | 推进 / 拉出深度；在轨迹上则沿轨迹走 |
-| 按住空格 | 看穿前景 |
-| ⌥ Tab | 切换窗口 |
-| F3 | Mission Control |
-| ⌘/Ctrl Z | 撤销一次布局（含 agent 做的） |
-| \` | 研究台 |
-| Ctrl + Shift + R | 进入 / 退出递归桌面实验视图 |
-| Ctrl / ⌘ / ⌥ + Shift + 滚轮（递归视图内） | 沿桌面自身的窗口连续缩放；也可点视图顶部的 +/- 按钮 |
-| 递归视图内拖窗口标题栏 | 移动同一窗口在所有递归层的布局；内容可直接操作 |
-
-```bash
 pnpm test
-pnpm typecheck
 pnpm build
+pnpm check:secrets
 ```
 
-## 许可
+With the development server running, browser checks cover the interaction paths:
 
-MIT。窗口内容里的论文、会议和文件都是虚构的，用来把任务演出来，不代表真实文献。视觉上参考了 macOS 的桌面习惯（红绿灯、Dock、毛玻璃），没有借用 [playground-macos](https://github.com/purocean/playground-macos) 的代码。
+```bash
+pnpm test:e2e
+pnpm test:boundary
+pnpm test:fusion
+pnpm test:capsule
+pnpm test:capsule-tree
+pnpm test:fluid
+pnpm test:cursor
+pnpm test:render
+pnpm test:keys
+```
 
-</details>
+Browser checks use a locally installed Chrome through `playwright-core`; provider checks use fixtures rather than paid model calls. Set `AW_URL` to test another running instance. The GIF capture script additionally requires `ffmpeg`. With a production preview running on port 4177, use `pnpm capture:readme` to regenerate the recordings.
 
+This prototype is still being refined. The included research documents and numerical examples are fixtures, not claims about published experimental results. Notes on choreography and rendering measurements are available in [the interaction notes](docs/embodied-interaction.md) and [performance notes](docs/animation-performance.md).
 
-### 当前自适应交互
+Issues and contributions are welcome, particularly around continuity, boundary legibility, accessible alternatives, and how these interactions support real collaborative tasks.
 
-- 长按空格孵化核心，爆开后显示七个独立候选；左右方向键随时切换，松开空格直接采用。
-- 长按空格孵化时点击窗口增减对象；未点选则超时全选，爆开后再用左右箭头切换候选。
-- 点击提示中的「撤回」或按 Esc 撤回。候选不再自动轮播。
-- 胶囊可拖动及缩放；悬停页面段显示标题，Option 拖动该段释放单页。
-- 移动、缩放时隐藏内部预览；大幅拉大胶囊会破裂并按顺序释放窗口，双击或右上角箭头也可释放全部。
+## Project and related work
 
-胶囊专项验证：`pnpm test:capsule`。
+Created by [Shoreee](https://github.com/Shoreee). For another interaction-led project by the author, see [LastStroke](https://github.com/Shoreee/LastStroke), a shared-drawing multiplayer game.
 
-中央揭示裁切上层页面，寻找下层重要区域并配合移位；边缘揭示从边角蚕食。缺口显示真实下层及透明光流，波动边缘可拖动闭合，闭合可撤回。回归：`node scripts/reveal-e2e.mjs`。
-
-
-### 在线版与当前页面 API Key
-
-GitHub Pages 在线版：[AquaWindow](https://shoreee.github.io/AquaWindow/)。点击左上角 AquaWindow，在密码输入框中填写自己的 DeepSeek API Key，点击「保存 Key」，然后主动开启「接入 DeepSeek」。默认关闭。Key 只在当前页面内存中保留，刷新后清空，不写入 localStorage、sessionStorage、Git 仓库或构建产物；填写的 Key 只随 HTTPS 请求发给 DeepSeek 官方接口。清除或替换 Key 会关闭接入并取消在途请求。未填页面 Key 的本地开发版仍可选择使用服务端 `.env.local` 配置。
-
-手动搬运的包覆从鼠标最初落点开始，自动布局仍从角落开始；包覆时长已增加，包住后再带动窗口移动，到位退膜。验证：`pnpm test:keys`、`pnpm test:boundary`。发布前执行 `pnpm check:secrets`，GitHub Pages 工作流也会检查源码与构建产物。
-
-手动拖动立即跟随鼠标，较慢的包覆只作为从落点展开的同步反馈；自动搬运仍先包覆再位移。第 2 项揭示是与窗口外侧相通的局部角落翻揭，第 1 项才是中央圆角矩形镂空。
+AquaWindow is released under the [MIT License](LICENSE).

@@ -21,7 +21,7 @@ export function beginWindowMotion(ids:string[],intent:'move'|'resize',point?:{x:
 
  const draw=(now:number)=>{
   if(stopped)return;const dt=Math.min(.05,(now-lastAt)/1000);lastAt=now;
-  const fade=releaseAt?Math.max(0,1-(now-releaseAt)/190):1;
+  const fade=releaseAt?Math.max(0,1-(now-releaseAt)/330):1;
   let moving=false,settled=true;
   const state=kernel.getState(),windows={...state.windows};
   for(const id of ids){const w=windows[id],from=starts.get(id);if(!w||!from)continue;
@@ -40,7 +40,7 @@ export function beginWindowMotion(ids:string[],intent:'move'|'resize',point?:{x:
   }
   kernel.previewState({...state,windows});
   activity+=( (moving?1:.7)-activity)*(1-Math.exp(-dt*16));
-  const age=(now-started)/1000;coverage+=(Math.min(1,age/.48)-coverage)*(1-Math.exp(-dt*25));
+  const age=(now-started)/1000;coverage+=(Math.min(1,age/.95)-coverage)*(1-Math.exp(-dt*25));
   if(ending&&!releaseAt&&settled&&coverage>.98)releaseAt=now;
   if(releaseAt&&fade<=0){clear();kernel.endGesture();return;}
   raf=requestAnimationFrame(draw);
@@ -48,7 +48,7 @@ export function beginWindowMotion(ids:string[],intent:'move'|'resize',point?:{x:
  cancelCurrent=()=>{clear();kernel.endGesture();};
  return {update(id:string,rect:Rect){if(stopped)return;targets.set(id,{...rect});if(direct)kernel.setRect(id,rect);
  if(!activated){const from=starts.get(id)!;if(Math.hypot(rect.x-from.x,rect.y-from.y,rect.w-from.w,rect.h-from.h)<1)return;activated=true;started=lastAt=performance.now();beginMaterial(ids);raf=requestAnimationFrame(draw);}
- },get stopped(){return stopped;},finish(){if(!activated){clear();kernel.endGesture();}else if(!stopped&&!ending)ending=performance.now();},cancel(){clear();kernel.endGesture();}};
+ },handoff(){clear();},get stopped(){return stopped;},finish(){if(!activated){clear();kernel.endGesture();}else if(!stopped&&!ending)ending=performance.now();},cancel(){clear();kernel.endGesture();}};
 }
 
 /** Maximise/restore uses the same carrier instead of jumping to its new rectangle. */

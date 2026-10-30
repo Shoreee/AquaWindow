@@ -16,17 +16,17 @@ export function TransportSkin({width,height,motion}:{width:number;height:number;
    <clipPath id={`carry-page-${key}`}><path d={path}/></clipPath>
    <clipPath id={`carry-growth-${key}`}><path d={frontPath}/></clipPath>
    <radialGradient id={`carry-tissue-${key}`} cx={`${x/width*100}%`} cy={`${y/height*100}%`} r="130%">
-    <stop offset="0" stopColor="#f9fdff" stopOpacity=".04"/><stop offset=".7" stopColor="#effaff" stopOpacity=".12"/><stop offset="1" stopColor="#fff" stopOpacity=".24"/>
+    <stop offset="0" stopColor="#f9fdff" stopOpacity=".07"/><stop offset=".7" stopColor="#effaff" stopOpacity=".18"/><stop offset="1" stopColor="#fff" stopOpacity=".32"/>
    </radialGradient>
   </defs>
   <g clipPath={`url(#carry-page-${key})`}>
    <g clipPath={`url(#carry-growth-${key})`}>
     <rect width={width} height={height} fill={`url(#carry-tissue-${key})`}/>
-    <path d={path} fill="none" stroke="#fbfeff" strokeWidth="11" opacity=".28"/>
+    <path d={path} fill="none" stroke="#fbfeff" strokeWidth="13" opacity=".4"/>
     <LivingRim path={path}/>
    </g>
    {coverage<.98&&<>
-    <path className="agent-engulf-front" d={frontPath} fill="none" stroke="#fbfeff" strokeWidth="10" opacity=".34"/>
+    <path className="agent-engulf-front" d={frontPath} fill="none" stroke="#fbfeff" strokeWidth="14" opacity=".48"/>
     <LivingRim path={frontPath}/>
    </>}
   </g>

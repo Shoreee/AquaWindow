@@ -1,7 +1,7 @@
 import type {KernelState,WindowState} from '../../kernel/types';
 import type {CapsuleSnapshot} from './types';
 import {capsuleSize} from './capsuleGeometry';
-export const restoredCapsuleMember=(member:WindowState,snapshot:CapsuleSnapshot):WindowState=>({...member,form:'normal',minimized:false,props:{...member.props,restoreScroll:snapshot.scroll[member.id]??0,restoreToken:performance.now()}});
+export const restoredCapsuleMember=(member:WindowState,snapshot:CapsuleSnapshot):WindowState=>({...member,form:member.form==='capsule'?'capsule':'normal',minimized:false,props:{...member.props,restoreScroll:snapshot.scroll[member.id]??0,restoreToken:performance.now()}});
 
 /** Pure split: the container gets a new identity if its original host page is taken out. */
 export function extractCapsuleState(state:KernelState,id:string,memberId:string){
