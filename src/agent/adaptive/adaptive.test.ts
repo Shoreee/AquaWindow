@@ -397,6 +397,17 @@ describe("precomputation buffer", () => {
 });
 
  describe("local rehearsal and remote opt-in", () => {
+  it("replaces stale selection and focus after a window is collected", () => {
+    const s = setup(), ctx = s.context([s.note]);
+    const remaining = ctx.windows.filter(w => w.id !== s.note);
+    const plans = localPlans({ ...ctx, windows: remaining, focusedId: s.note });
+    expect(plans).toHaveLength(7);
+    for (const plan of plans) {
+      expect(plan.primaryTargets.length).toBeGreaterThan(0);
+      expect(plan.primaryTargets.every(id => remaining.some(w => w.id === id))).toBe(true);
+    }
+    expect(localPlans({ ...ctx, windows: [] })).toEqual([]);
+  });
   it("uses valid local plans and moves windows without any model request by default", () => {
     const s = setup(), fetcher = vi.fn();
     const buffer = new CandidateBuffer(fetcher as typeof fetch);

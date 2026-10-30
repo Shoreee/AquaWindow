@@ -4,7 +4,9 @@ import type { AgentContext, AgentPlan, Artifact, PrimitiveStep } from "./types";
 export function localPlans(ctx: AgentContext): AgentPlan[] {
   if (!ctx.windows.length) return [];
   const preferred = ctx.windows.find((w) => w.app === (ctx.task === "files" ? "finder" : "writer"));
-  const primary = ctx.selectedIds.length ? ctx.selectedIds : [preferred?.id ?? ctx.focusedId ?? ctx.windows[0].id];
+  const visibleIds = new Set(ctx.windows.map(w => w.id));
+  const selected = ctx.selectedIds.filter(id => visibleIds.has(id));
+  const primary = selected.length ? selected : [preferred?.id ?? (ctx.focusedId && visibleIds.has(ctx.focusedId) ? ctx.focusedId : ctx.windows[0].id)];
   const referenceApp = ctx.task === "files" ? "finder" : "preview";
   const supports = ctx.windows.filter((w) => !primary.includes(w.id))
     .sort((a, b) => (b.app === referenceApp ? 2 : b.app === "writer" ? 1 : 0) - (a.app === referenceApp ? 2 : a.app === "writer" ? 1 : 0)).map((w) => w.id);
