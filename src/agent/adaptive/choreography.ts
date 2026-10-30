@@ -42,7 +42,7 @@ interface Segment {
 }
 const timing: Record<Primitive, [number, number]> = {
   arrange: [.85, 2.15], anchor: [0, 0], peel: [.6, 1.75],
-  yield: [.6, 1.6], encapsulate: [.55, 1.8], branch: [.85, 2.25],
+  yield: [.6, 1.6], encapsulate: [.38, 1.8], branch: [.85, 2.25],
   merge: [.85, 2.25], permeate: [.6, 1.35],
 };
 export const ease = (x: number) => { const t = Math.max(0, Math.min(1, x)); return t*t*t*(t*(t*6-15)+10); };
@@ -99,7 +99,7 @@ export class PlanPerformance {
       const [defaultTravel, defaultWork] = timing[step.type];
       const previousReveal=[...targets].some(id=>(before.windows[id]?.props.agentView as {revealed?:boolean}|undefined)?.revealed);
       const travel=retarget?Math.min(previousReveal?.3:.12,defaultTravel):defaultTravel;
-      const work=step.type==='encapsulate'?(targets.size-1)*1.08+.98:defaultWork;
+      const work=step.type==='encapsulate'?(targets.size-1)*.76+.72:defaultWork;
       const duration = travel + work + .3;
       this.segments.push({ primitive: step.type, edge: "direction" in step ? step.direction : "edge" in step ? step.edge : "right", start, travel, work, duration, targets: [...targets], children, before, after });
       start += duration; before = after;
@@ -143,8 +143,8 @@ export class PlanPerformance {
     for (const id of allIds) {
       const queue=segment.primitive==='encapsulate';
       const queueIndex=segment.targets.indexOf(id);
-      const itemAge=queue?age-Math.max(0,queueIndex)*1.08:age;
-      const itemLinear=queue?Math.max(0,Math.min(1,(itemAge-segment.travel)/.98)):linear;
+      const itemAge=queue?age-Math.max(0,queueIndex)*.76:age;
+      const itemLinear=queue?Math.max(0,Math.min(1,(itemAge-segment.travel)/.72)):linear;
       const action=queue?ease(itemLinear):globalAction;
       const arrival=queue?ease(itemAge/segment.travel):globalArrival;
       const target=segment.after.windows[id],prior=segment.before.windows[id];
@@ -162,7 +162,7 @@ export class PlanPerformance {
       if (!segment.targets.includes(id)) continue;
       const capsule = segment.primitive === 'encapsulate'
         ? segment.targets.map(id => segment.after.windows[id]).find(w => w?.form === 'capsule' && w.capsuleRect)?.capsuleRect : undefined;
-      const count=queue?Math.min(segment.targets.length,Math.max(1,segment.targets.reduce((sum,_,i)=>sum+ease(((age-i*1.08-segment.travel)/.98-.58)/.42),0))):1;
+      const count=queue?Math.min(segment.targets.length,Math.max(1,segment.targets.reduce((sum,_,i)=>sum+ease(((age-i*.76-segment.travel)/.72-.58)/.42),0))):1;
       const packetSize=capsuleSize(queueIndex+1),receiverSize=capsuleSize(count);
       const queueTarget=capsule?{x:capsule.x+capsule.w-packetSize.w,y:capsule.y,w:packetSize.w,h:packetSize.h}:undefined;
       const to = queueTarget ?? (next.form === 'capsule' && next.capsuleRect ? next.capsuleRect : next.rect);
@@ -203,9 +203,9 @@ export class PlanPerformance {
       const oldReveal=Number(old.props.agentRevealProgress??((oldMotion?.primitive==='peel'||oldMotion?.concurrent==='peel')?ease((oldMotion.action-.12)/.88):1));
       const revealExit=exitingReveal?oldReveal*(1-ease(Math.max(0,itemAge)/(segment.travel||segment.work))):undefined;
       const keepOldReveal=exitingReveal&&(itemAge<segment.travel||!nextView?.revealed&&action<1);
-      const mergedCount=queue?segment.targets.filter((_,i)=>age-i*1.08>=segment.travel+.98).length:0;
+      const mergedCount=queue?segment.targets.filter((_,i)=>age-i*.76>=segment.travel+.72).length:0;
       const incoming=queue?Math.max(0,...segment.targets.map((_,i)=>{
-        const q=Math.max(0,Math.min(1,(age-i*1.08-segment.travel)/.98));
+        const q=Math.max(0,Math.min(1,(age-i*.76-segment.travel)/.72));
         return Math.sin(Math.PI*ease((q-.58)/.42));
       })):0;
       // Minimize / replace the content only after the wrapping organism has closed its shell.

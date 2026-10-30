@@ -1,4 +1,5 @@
 import {WindowMenu} from './WindowMenu';
+import {useStore} from '../system/createStore';
 import {DockedCapsules} from './DockedCapsules';
 import {dockParent} from '../agent/adaptive/capsuleTree';
 import {NativeBondSkin} from './NativeBondSkin';
@@ -76,6 +77,7 @@ function snapTarget(x: number, y: number): Rect | null {
 
 
 function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) {
+  const fusionPending=useStore(surfaceUi,s=>s.candidate?.a===win.id||s.candidate?.b===win.id);
   const def = APPS[win.appId];
   const [menuAt,setMenuAt]=useState<{x:number;y:number}|null>(null);
   const closeMenu=useCallback(()=>setMenuAt(null),[]);
@@ -422,7 +424,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
         {agentView?.revealed && <RevealSurface id={win.id} view={agentView} width={rect.w} height={rect.h} progress={revealProgress} closure={win.props.agentRevealClosure as RevealClosure|undefined} body={bodyRef} baseClip={clip}/>}
       </div>
 
-      {surfaceBonds(win).length>0&&<NativeBondSkin win={win} shell={shellRef} geometry={deformation} baseClip={undefined}/>}
+      {(surfaceBonds(win).length>0||fusionPending)&&<NativeBondSkin win={win} shell={shellRef} geometry={deformation} baseClip={undefined}/>}
       <TransportSkin width={rect.w} height={rect.h} motion={agentMotion}/>
       {deformation&&<FluidBoundary geometry={deformation} material={false}/>}
 
