@@ -13,6 +13,7 @@ import { Window } from './Window';
 import { SystemDock, SystemMenuBar } from './SystemChrome';
 import { AgentScene } from './AgentScene';
 import { startAdaptiveRuntime } from '../agent/adaptive/runtime';
+import {TaskCard} from '../study/TaskCard';
 
 const development = import.meta.env.DEV && new URLSearchParams(location.search).get('dev') === '1';
 
@@ -138,6 +139,7 @@ export function Desktop() {
       {snap && <div className="snap-preview" style={{ left: snap.x, top: snap.y, width: snap.w, height: snap.h }} />}
       {xray && <div className="xray-hint">X-ray — front layers are see-through · release Space</div>}
       {development ? <><ProposalLayer /><ScenarioPanel /><MenuBar /><ControlCenter /><Dock /></> : <><SystemMenuBar /><SystemDock /></>}
+      {!development && <TaskCard />}
       <Toasts />
       <MissionControl />
       <Switcher />

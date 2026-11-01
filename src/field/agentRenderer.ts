@@ -813,7 +813,7 @@ export function createAgentRenderer(canvas: HTMLCanvasElement) {
   return {
     render(s: EnergyScene, time: number, quality: number) {
       const cursorOnly=s.morph<.12&&s.links.length===0;
-      const dpr = cursorOnly?Math.max(2,Math.min(devicePixelRatio||1,2.5)):Math.min(devicePixelRatio || 1, quality);
+      const dpr = cursorOnly?Math.min(devicePixelRatio||1,1.5):Math.min(devicePixelRatio || 1, quality);
       const w = Math.round(innerWidth * dpr),
         h = Math.round(innerHeight * dpr);
       if (width !== w || height !== h) {

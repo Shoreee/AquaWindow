@@ -1,6 +1,6 @@
 import {cancelSurfaceInteraction,surfaceBusy} from '../../shell/surfaceFusion';
 import {getSessionKey,setSessionKey} from './credentials';
-import {cancelManualWindowMotion,manualWindowMotionActive} from "./manualMotion";
+import {cancelManualWindowMotion,manualCursorDragActive,manualWindowMotionActive} from "./manualMotion";
 import {previewCapsuleDrop,cancelCapsuleMotion,capsuleMotionActive,capsuleRectInside} from "./capsule";
 import { kernel, workArea } from "../../system/kernel";
 import { bus } from "../../system/bus";
@@ -178,6 +178,7 @@ export function startAdaptiveRuntime() {
     pointer.x = e.clientX;
     pointer.y = e.clientY;
     pointer.visible = e.pointerType !== "touch";
+    if (!ui.get().agentEnabled && !manualCursorDragActive()) return;
     const target = e.target as HTMLElement;
     if (target.closest('input,textarea,[contenteditable="true"]'))
       pointer.kind = "text";

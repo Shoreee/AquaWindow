@@ -3,15 +3,12 @@ import {credentialState} from '../agent/adaptive/credentials';
 import { memo, useEffect, useRef, useState } from "react";
 import { AppIcon } from "../apps/icons";
 import { APPS } from "../apps/registry";
-import { PAPERS } from "../apps/data/papers";
-import { defaultImportance } from "../apps/importance";
 import { adaptation, planBuffer, serviceStore, setDeepSeekEnabled, setDeepSeekApiKey } from "../agent/adaptive/runtime";
 import { statusMessages } from "../agent/adaptive/buffer";
 import { useStore } from "../system/createStore";
 import { agent, kernel, ui, undo, useKernelState, workArea } from "./hooks";
-import { openApp } from "./Chrome";
 import { BASELINE } from "../techniques/techniques";
-import { bounded } from "../agent/adaptive/compiler";
+import {openStudyResource} from '../apps/StudyMaterials';
 
 export function bootDesktop() {
   cancelSurfaceInteraction();
@@ -34,49 +31,6 @@ export function bootDesktop() {
       provenance: true,
     },
   });
-  const W = workArea();
-  const open = (
-    appId: string,
-    title: string,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    props: Record<string, unknown>,
-  ) =>
-    kernel.open(
-      {
-        appId,
-        title,
-        role:
-          appId === "writer"
-            ? "primary"
-            : appId === "preview"
-              ? "reference"
-              : "tool",
-        rect: bounded(
-          {
-            x: W.x + W.w * x,
-            y: W.y + W.h * y,
-            w: Math.min(w, W.w * 0.6),
-            h: Math.min(h, W.h * 0.86),
-          },
-          W,
-        ),
-        props,
-        importance: defaultImportance(appId),
-        focus: false,
-      },
-      "system",
-    );
-  open("finder", "研究资料", 0.035, 0.46, 550, 350, { path: "Downloads" });
-  open("preview", PAPERS[0].title, 0.1, 0.035, 580, 650, {
-    paperId: PAPERS[0].id,
-  });
-  const note = open("writer", "窗口协作 · 研究笔记", 0.54, 0.11, 550, 610, {
-    docId: "draft",
-  });
-  kernel.focus(note, "system");
 }
 
 function SystemMenuBarImpl() {
@@ -247,27 +201,16 @@ function SystemMenuBarImpl() {
 }
 
 function SystemDockImpl() {
-  const apps = ["finder", "preview", "writer"];
-  const running = useKernelState(s=>apps.reduce((bits,id,i)=>Object.values(s.windows).some(w=>w.appId===id&&!w.minimized)?bits|(1<<i):bits,0));
+  const apps=[{id:'finder',label:'文件',resource:'files'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'}];
+  const running=useKernelState(s=>apps.reduce((bits,app,index)=>Object.values(s.windows).some(w=>w.appId==='study'&&w.props.resource===app.resource&&!w.minimized)?bits|(1<<index):bits,0));
   return (
     <div className="dock-wrap">
       <div className="dock system-dock">
-        {apps.map((id,index) => (
-          <button
-            className="dock-i"
-            key={id}
-            onClick={() => openApp(id)}
-            aria-label={`打开${APPS[id].name}`}
-          >
-            <span className="dock-tip">
-              {id === "finder" ? "文件" : id === "preview" ? "论文" : "笔记"}
-            </span>
-            <span className="dock-img">
-              <AppIcon appId={id} size={45} />
-            </span>
-            {(running & (1<<index))!==0 && <span className="dock-dot" />}
-          </button>
-        ))}
+        {apps.map((app,index)=><button className="dock-i" key={app.id} aria-label={`打开${app.label}`} onClick={()=>openStudyResource(app.resource,app.resource==='notes'?'实验笔记':app.resource==='qa'?'AI 问答':'文件')}>
+          <span className="dock-tip">{app.label}</span>
+          <span className="dock-img"><AppIcon appId={app.id} size={45}/></span>
+          {(running&(1<<index))!==0&&<span className="dock-dot"/>}
+        </button>)}
         <span className="dock-sep" />
         <button
           className="dock-i dock-overview"
