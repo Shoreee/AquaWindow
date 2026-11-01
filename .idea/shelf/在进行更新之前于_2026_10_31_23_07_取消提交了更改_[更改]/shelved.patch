@@ -1,0 +1,44 @@
+Index: .idea/indexLayout.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/indexLayout.xml b/.idea/indexLayout.xml
+new file mode 100644
+--- /dev/null	(date 1793259690985)
++++ b/.idea/indexLayout.xml	(date 1793259690985)
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="UserContentModel">
++    <attachedFolders />
++    <explicitIncludes />
++    <explicitExcludes />
++  </component>
++</project>
+\ No newline at end of file
+Index: .idea/.gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/.gitignore b/.idea/.gitignore
+new file mode 100644
+--- /dev/null	(date 1793259697001)
++++ b/.idea/.gitignore	(date 1793259697001)
+@@ -0,0 +1,15 @@
++# 默认忽略的文件
++/shelf/
++/workspace.xml
++# 基于编辑器的 HTTP 客户端请求
++/httpRequests/
++# Rider 忽略的文件
++/modules.xml
++/contentModel.xml
++/projectSettingsUpdater.xml
++/.idea.AquaWindow1.iml
++# 已忽略包含查询文件的默认文件夹
++/queries/
++# Datasource local storage ignored files
++/dataSources/
++/dataSources.local.xml
