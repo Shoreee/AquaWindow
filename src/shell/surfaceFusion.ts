@@ -61,7 +61,7 @@ export function shakeApart(id:string,continuingGesture=false){
  return true;
 }
 function rollback(base:KernelState,raf:number,continuing=false){const changed=continuing||kernel.getState()!==base;cancelAnimationFrame(raf);stopCurrent=null;surfaceUi.set({split:null,candidate:null});kernel.endGesture();if(changed)kernel.undo('user');}
-export function fuseSurfaces(movingId:string,fixedId:string,continuingGesture=false){
+export function fuseSurfaces(movingId:string,fixedId:string,continuingGesture=false,setupOnly=false){
  if(!continuingGesture){cancelSurfaceInteraction();cancelManualWindowMotion();cancelCapsuleMotion();}
  const base=kernel.getState(),moving=base.windows[movingId],fixed=base.windows[fixedId];
  if(!moving||!fixed||moving.group&&moving.group===fixed.group){if(continuingGesture)kernel.endGesture();return;}
@@ -79,7 +79,7 @@ export function fuseSurfaces(movingId:string,fixedId:string,continuingGesture=fa
     props:{...w.props,surfaceAnimating:t<1?true:undefined,surfaceBonds:id===bond.a||id===bond.b?[...bonds,bond]:bonds}};
   }
   kernel.previewState({...current,windows});
-  if(t<1)raf=requestAnimationFrame(draw);else{stopCurrent=null;kernel.endGesture();toast('已融合 · 拖动任一标题栏一起移动；沿接缝拉到底可分开',true);}
+  if(t<1)raf=requestAnimationFrame(draw);else{stopCurrent=null;kernel.endGesture();toast(setupOnly?'已准备融合窗口 · 抓住标题栏左右抖动使其分开':'已融合 · 拖动任一标题栏一起移动；沿接缝拉到底可分开',true);}
  };
  stopCurrent=()=>rollback(base,raf,continuingGesture);raf=requestAnimationFrame(draw);
 }

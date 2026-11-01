@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useStore } from '../system/createStore';
 import { studyTasks, studyTaskStore, switchStudyTask, type StudyTaskId } from './tasks';
+import {ui} from '../system/ui';
 
 export function TaskCard(){
   const [expanded,setExpanded]=useState(false);
   const current=useStore(studyTaskStore,state=>state.current);
+  const studyMode=useStore(ui,state=>state.studyMode);
   const task=studyTasks[current];
   return <aside className={`study-task-card${expanded?' expanded':''}`} aria-label="当前实验任务">
     <button
@@ -28,7 +30,7 @@ export function TaskCard(){
       <ol>
         {task.steps.map(step=><li key={step}>{step}</li>)}
       </ol>
-      <p className="study-task-foot">你可以独立移动、缩放和切换窗口。完成后告知研究者。</p>
+      <p className="study-task-foot">{studyMode?'你可以独立移动、缩放和切换窗口。完成后告知研究者。':'请先在顶部“交互形式”中选择本次要体验的方式。'}</p>
     </div>}
   </aside>;
 }

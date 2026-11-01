@@ -72,6 +72,7 @@ export function Desktop() {
   const [recursiveOrder, setRecursiveOrder] = useState<string[] | null>(null);
   const state = useKernelState((s) => s);
   const tech = useStore(ui, (s) => s.tech);
+  const studyMode = useStore(ui, (s) => s.studyMode);
   const activeId = useStore(ui, (s) => s.activeId);
   const xray = useStore(ui, (s) => s.xray);
   const snap = useStore(ui, (s) => s.snapPreview);
@@ -111,7 +112,7 @@ export function Desktop() {
   }, [order, state, visuals, tech.fusion, mention]);
 
   return (
-    <div className={`desktop production-desktop ${xray ? 'xray' : ''} ${tech.shape === 'squircle' ? 'fluid-mode' : ''}`}>
+    <div className={`desktop production-desktop ${xray ? 'xray' : ''} ${tech.shape === 'squircle' ? 'fluid-mode' : ''} ${!development&&studyMode?`study-mode-${studyMode}`:''}`}>
       <div className="wallpaper">
         <div className="blob b1" />
         <div className="blob b2" />

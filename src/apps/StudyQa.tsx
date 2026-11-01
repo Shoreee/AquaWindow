@@ -7,6 +7,10 @@ type Message = { role: 'user' | 'assistant'; text: string; attachments: Attachme
 type SavedQa={messages:Message[];draft:string;pending:Attachment[]};
 const qaState=new Map<string,SavedQa>(),objectUrls=new Map<string,Set<string>>();
 kernel.onEvent(event=>{if(event.type==='reset'){for(const urls of objectUrls.values())for(const url of urls)URL.revokeObjectURL(url);objectUrls.clear();qaState.clear();}});
+export function copyStudyQaState(sourceId:string,copyId:string){
+  const state=qaState.get(sourceId);
+  if(state)qaState.set(copyId,{messages:state.messages.map(message=>({...message,attachments:[...message.attachments],sentences:message.sentences?[...message.sentences]:undefined})),draft:state.draft,pending:[...state.pending]});
+}
 
 export default function StudyQa({windowId,example}:{windowId:string;example?:StudyAnswerExample}){
   const [messages,setMessages]=useState<Message[]>(()=>qaState.get(windowId)?.messages??(example?[

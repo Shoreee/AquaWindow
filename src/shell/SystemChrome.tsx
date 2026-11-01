@@ -1,4 +1,6 @@
-import {cancelSurfaceInteraction} from './surfaceFusion';
+import {cancelSurfaceInteraction,fuseSurfaces} from './surfaceFusion';
+import {cancelCapsuleMotion} from '../agent/adaptive/capsule';
+import {cancelManualWindowMotion} from '../agent/adaptive/manualMotion';
 import {credentialState} from '../agent/adaptive/credentials';
 import { memo, useEffect, useRef, useState } from "react";
 import { AppIcon } from "../apps/icons";
@@ -7,11 +9,14 @@ import { adaptation, planBuffer, serviceStore, setDeepSeekEnabled, setDeepSeekAp
 import { statusMessages } from "../agent/adaptive/buffer";
 import { useStore } from "../system/createStore";
 import { agent, kernel, ui, undo, useKernelState, workArea } from "./hooks";
-import { BASELINE } from "../techniques/techniques";
+import {toast} from '../system/ui';
+import {studyInteractionModes,studyTechniques,type StudyInteractionModeId} from '../study/interactionModes';
 import {openStudyResource} from '../apps/StudyMaterials';
 
-export function bootDesktop() {
+export function bootDesktop(studyMode:StudyInteractionModeId|null=ui.get().studyMode) {
   cancelSurfaceInteraction();
+  cancelCapsuleMotion();
+  cancelManualWindowMotion();
   adaptation.cancel();
   agent.stop();
   kernel.closeAll();
@@ -21,17 +26,8 @@ export function bootDesktop() {
     scenarioPanel: false,
     agentEnabled: false,
     autonomy: "off",
-    tech: {
-      ...BASELINE,
-      shape: "squircle",
-      yield: "deform",
-      cutout: true,
-      fusion: true,
-      snap: true,
-      periphery: true,
-      semanticFiles: true,
-      provenance: true,
-    },
+    studyMode,
+    tech: studyTechniques(studyMode),
   });
 }
 
@@ -45,6 +41,7 @@ function SystemMenuBarImpl() {
   const [apiDraft,setApiDraft]=useState('');
   const phase = useStore(adaptation.store, (s) => s.phase);
   const agentOn = useStore(ui, (s) => s.agentEnabled);
+  const studyMode = useStore(ui, (s) => s.studyMode);
   const [menu, setMenu] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
   const ref = useRef<HTMLDivElement>(null);
@@ -78,6 +75,15 @@ function SystemMenuBarImpl() {
       agent.start();
     }
   };
+  const prepareShake=()=>{
+    const windows=kernel.list().filter(win=>win.form==='normal'&&!win.minimized);
+    if(windows.length<2){toast('先从文件夹打开两个窗口');return;}
+    const state=kernel.getState(),ordered=state.order.map(id=>state.windows[id]).filter(win=>win?.form==='normal'&&!win.minimized);
+    const a=ordered.at(-1),b=ordered.at(-2);
+    if(!a||!b)return;
+    if(a.group&&a.group===b.group){toast('这两个窗口已经融合，可以抓住标题栏左右抖动');return;}
+    fuseSurfaces(a.id,b.id,false,true);
+  };
   return (
     <div className="menubar system-menubar" ref={ref}>
       <button
@@ -101,6 +107,9 @@ function SystemMenuBarImpl() {
         onClick={() => setMenu(menu === "edit" ? null : "edit")}
       >
         编辑
+      </button>
+      <button className="mb-item study-mode-trigger" aria-expanded={menu==='study-mode'} onClick={()=>setMenu(menu==='study-mode'?null:'study-mode')}>
+        交互形式：{studyMode?studyInteractionModes.find(item=>item.id===studyMode)?.label:'请选择'}
       </button>
       <div className="mb-spacer" />
       {agentOn && <span
@@ -196,6 +205,14 @@ function SystemMenuBarImpl() {
               </div>}
             </>
           )}
+          {menu === 'study-mode' && <>
+            <p className="study-mode-menu-intro">每次只启用一种交互形式。涡虫拖动始终保留。</p>
+            {studyInteractionModes.map(item=><button key={item.id} className={`study-mode-option${studyMode===item.id?' selected':''}`} aria-pressed={studyMode===item.id} onClick={action(()=>{if(studyMode!==item.id)bootDesktop(item.id);})}>
+              <span><strong>{item.label}</strong><small>{item.description}</small></span><i aria-hidden="true">{studyMode===item.id?'✓':''}</i>
+            </button>)}
+            {studyMode==='shake'&&<><div className="mb-sep"/><button onClick={action(prepareShake)}>准备已融合窗口</button></>}
+            <p className="study-mode-menu-foot">切换形式会重新开始当前任务，并清空已打开窗口。</p>
+          </>}
         </div>
       )}
     </div>

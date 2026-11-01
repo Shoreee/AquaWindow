@@ -21,6 +21,10 @@ const pages=[
 type SavedBrowser={draft:string;query:string;selectedId:string|null;scroll:number};
 const browserState=new Map<string,SavedBrowser>();
 kernel.onEvent(event=>{if(event.type==='reset')browserState.clear();});
+export function copyStudyBrowserState(sourceId:string,copyId:string){
+  const state=browserState.get(sourceId);
+  if(state)browserState.set(copyId,{...state});
+}
 
 export default function StudyBrowser({windowId}:{windowId:string}){
   const [draft,setDraft]=useState(()=>browserState.get(windowId)?.draft??'');

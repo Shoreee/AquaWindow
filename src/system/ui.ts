@@ -1,6 +1,7 @@
 import type { Rect, WindowId } from '../kernel/types';
 import { CONDITIONS, type Autonomy, type ConditionId, type Techniques } from '../techniques/techniques';
 import { createStore } from './createStore';
+import type {StudyInteractionModeId} from '../study/interactionModes';
 
 export interface Toast {
   id: string;
@@ -12,6 +13,7 @@ export interface Toast {
 export interface UiState {
   condition: ConditionId;
   tech: Techniques;
+  studyMode: StudyInteractionModeId|null;
   agentEnabled: boolean;
   autonomy: Autonomy;
   scenarioId: string | null;
@@ -33,6 +35,7 @@ export interface UiState {
 export const ui = createStore<UiState>({
   condition: 'fluid-agent',
   tech: CONDITIONS[3].techniques,
+  studyMode: null,
   agentEnabled: false,
   autonomy: 'off',
   scenarioId: null,

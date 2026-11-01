@@ -6,7 +6,7 @@ import {NativeBondSkin} from './NativeBondSkin';
 import {cancelSurfaceInteraction,fuseSurfaces,previewSurfaceFusion,shakeApart,surfaceUi} from './surfaceFusion';
 import {attachedResize,isSurfaceGroup,surfaceBonds,surfaceComponent} from './surfaceBondGeometry';
 import {TransportSkin} from './TransportSkin';
-import {cancelCapsuleMotion,packWindows,previewCapsuleDrop,finishCapsuleDrop,capsuleDropUi} from "../agent/adaptive/capsule";
+import {cancelCapsuleMotion,packWindows,previewCapsuleDrop,finishCapsuleDrop,capsuleDropUi,manualCapsuleWorkArea} from "../agent/adaptive/capsule";
 import {capsuleSize} from '../agent/adaptive/capsuleGeometry';
 import {beginWindowMotion,cancelManualWindowMotion,maximizeWithMotion} from "../agent/adaptive/manualMotion";
 import { ease as motionEase } from "../agent/adaptive/choreography";
@@ -66,6 +66,7 @@ const Content = memo(
 );
 
 const EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
+const studyDesktop=!(import.meta.env.DEV&&new URLSearchParams(location.search).get('dev')==='1');
 
 function snapTarget(x: number, y: number): Rect | null {
   const W = workArea();
@@ -79,6 +80,10 @@ function snapTarget(x: number, y: number): Rect | null {
 
 function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) {
   const fusionPending=useStore(surfaceUi,s=>s.candidate?.a===win.id||s.candidate?.b===win.id);
+  const studyMode=useStore(ui,s=>s.studyMode);
+  const canCapsule=!studyDesktop||studyMode==='capsule';
+  const canFusion=!studyDesktop||studyMode==='fusion';
+  const canShake=studyDesktop&&studyMode==='shake';
   const def = APPS[win.appId];
   const [menuAt,setMenuAt]=useState<{x:number;y:number}|null>(null);
   const closeMenu=useCallback(()=>setMenuAt(null),[]);
@@ -172,7 +177,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     let lastShakeX=sx,shakeDirection=0,shakeTurnX=sx,shakeTurns=0;
     const move = (ev: PointerEvent) => {
       if(material?.stopped)return;
-      if(members.length>1&&!capsule){
+      if(canShake&&members.length>1&&!capsule){
         const step=ev.clientX-lastShakeX,dir=Math.sign(step);
         if(Math.abs(step)>2&&dir){
           if(!shakeDirection)shakeDirection=dir;
@@ -194,8 +199,8 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
         return;
       }
       for (const s of starts) material?.update(s.id, { ...s.r, x: s.r.x + dx, y: Math.max(MENUBAR, s.r.y + dy) });
-      previewCapsuleDrop(starts.map(s=>s.id),ev.clientX,ev.clientY);
-      if(members.length===1&&!capsuleDropUi.get().target&&tech.fusion)previewSurfaceFusion(win.id,true);else previewSurfaceFusion(null);
+      if(canCapsule)previewCapsuleDrop(starts.map(s=>s.id),ev.clientX,ev.clientY);
+      if(members.length===1&&(!canCapsule||!capsuleDropUi.get().target)&&tech.fusion&&canFusion)previewSurfaceFusion(win.id,true);else previewSurfaceFusion(null);
       if (tech.snap && members.length === 1) {
         snap = snapTarget(ev.clientX, ev.clientY);
         ui.set({ snapPreview: snap });
@@ -207,7 +212,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
       window.removeEventListener('blur',up);
       if(material?.stopped){previewCapsuleDrop([]);previewSurfaceFusion(null);ui.set({activeId:null,snapPreview:null});return;}
       if (snap){if(material)material.update(win.id,snap);else kernel.setRect(win.id, snap, 'user', 'snap');}
-      const drop=capsuleDropUi.get().target;previewCapsuleDrop([]);
+      const drop=canCapsule?capsuleDropUi.get().target:null;previewCapsuleDrop([]);
       const fusion=surfaceUi.get().candidate;
       if(material&&drop){material.handoff();previewSurfaceFusion(null);finishCapsuleDrop(starts.map(s=>s.id),drop,true);}
       else if(material&&fusion?.a===win.id&&!snap){material.handoff();fuseSurfaces(win.id,fusion.b,true);}else{previewSurfaceFusion(null);if(material)material.finish();else kernel.endGesture();}
@@ -249,17 +254,17 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
         r.y = Math.max(MENUBAR, r0.y + r0.h - r.h);
       }
       for(const [id,rect] of attachedResize(resizeBase,win.id,r))material.update(id,rect);
-      kernel.setProps(win.id,{agentCollapsePreview:r.w<160&&r.h<110});
-      previewCapsuleDrop(resizeIds,ev.clientX,ev.clientY);
+      kernel.setProps(win.id,{agentCollapsePreview:canCapsule&&r.w<160&&r.h<110});
+      if(canCapsule)previewCapsuleDrop(resizeIds,ev.clientX,ev.clientY);
     };
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('blur',up);
       if(material.stopped){previewCapsuleDrop([]);ui.set({activeId:null});return;}
-      const current=kernel.get(win.id),drop=capsuleDropUi.get().target;previewCapsuleDrop([]);
+      const current=kernel.get(win.id),drop=canCapsule?capsuleDropUi.get().target:null;previewCapsuleDrop([]);
       if(drop){material.handoff();kernel.setProps(win.id,{agentCollapsePreview:undefined});finishCapsuleDrop(resizeIds,drop,true);}
-      else if(current&&current.rect.w<160&&current.rect.h<110){kernel.setProps(win.id,{agentCollapsePreview:undefined});material.finish();setCapsuleProposal(true);}
+      else if(canCapsule&&current&&current.rect.w<160&&current.rect.h<110){kernel.setProps(win.id,{agentCollapsePreview:undefined});material.finish();setCapsuleProposal(true);}
       else {kernel.setProps(win.id,{agentCollapsePreview:undefined});material.finish();}
       ui.set({ activeId: null });
     };
@@ -454,7 +459,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     </div>,document.body):null;
   const capsuleGhost=reentry?.source&&reentry.rect&&reentry.amount<.65?createPortal(<div className="agent-queue-receiver task-session" style={{position:'fixed',left:reentry.rect.x,top:reentry.rect.y,width:reentry.rect.w,height:reentry.rect.h,zIndex:visual.zIndex,opacity:1-motionEase(reentry.amount/.4),pointerEvents:'none'}} aria-hidden="true"><SessionCapsule id={win.id} snapshot={reentry.source}/></div>,document.body):null;
   const proposedCapsuleRect=capsuleProposal?(()=>{
-    const size=capsuleSize(surfaceComponent(kernel.getState(),win.id).length),count=kernel.list().filter(item=>item.props.agentCapsule).length,area=workArea();
+    const size=capsuleSize(surfaceComponent(kernel.getState(),win.id).length),count=kernel.list().filter(item=>item.props.agentCapsule).length,area=manualCapsuleWorkArea();
     return {x:area.x+area.w-size.w-12,y:Math.min(area.y+area.h-size.h,area.y+16+count*126),...size};
   })():null;
   const proposal=capsuleProposal?createPortal(<div className="study-capsule-proposal" role="dialog" aria-label="胶囊布局预览" style={{left:Math.max(12,Math.min(innerWidth-270,rect.x+rect.w-240)),top:Math.max(MENUBAR+8,Math.min(innerHeight-156,rect.y+44))}}>
@@ -464,13 +469,13 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   </div>,document.body):null;
   const proposalTarget=proposedCapsuleRect?createPortal(<div className="study-capsule-target" style={{left:proposedCapsuleRect.x,top:proposedCapsuleRect.y,width:proposedCapsuleRect.w,height:proposedCapsuleRect.h}} aria-hidden="true"><AppIcon appId={win.appId} size={17}/><span>{win.title}</span></div>,document.body):null;
   return (
-    <>{menuAt&&<WindowMenu id={win.id} x={menuAt.x} y={menuAt.y} onClose={closeMenu} onMarkImportance={()=>setMarking(true)} onPreviewCapsule={()=>setCapsuleProposal(true)}/>} {receiver}{capsuleGhost}{proposal}{proposalTarget}<div className={cls} style={{ ...outerStyle, ['--agent-title-mix' as string]:titleMix, ['--agent-panel-w' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32)))}px`, ['--agent-reveal' as string]: revealProgress, ['--agent-peel-width' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32))) * revealProgress}px`, ['--agent-peel-height' as string]: `${win.rect.h * .45 * revealProgress}px` }} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive} onPointerDownCapture={onPointerDownCapture} onPointerDown={onAltCorner} onWheel={onWheel}>
+    <>{menuAt&&<WindowMenu id={win.id} x={menuAt.x} y={menuAt.y} onClose={closeMenu} onMarkImportance={()=>setMarking(true)} onPreviewCapsule={()=>setCapsuleProposal(true)} studyMode={studyDesktop?studyMode:undefined}/>} {receiver}{capsuleGhost}{proposal}{proposalTarget}<div className={cls} style={{ ...outerStyle, ['--agent-title-mix' as string]:titleMix, ['--agent-panel-w' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32)))}px`, ['--agent-reveal' as string]: revealProgress, ['--agent-peel-width' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32))) * revealProgress}px`, ['--agent-peel-height' as string]: `${win.rect.h * .45 * revealProgress}px` }} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive} onPointerDownCapture={onPointerDownCapture} onPointerDown={onAltCorner} onWheel={onWheel}>
       {!!win.props.agentCollapsePreview&&<div className="collapse-hint">松开预览胶囊布局</div>}
       {!!win.props.agentBond && <div className="agent-bond-skin" aria-hidden="true" />}
       <div className="aw-shell" ref={shellRef} style={shellStyle} data-fluid-skin={deformation?"true":undefined}>
         {(deformation||surfaceBonds(win).length>0)&&!revealed&&!visual.maskImage&&!visual.dented&&<div className="agent-fluid-material" aria-hidden="true"/>}
         {agentView && !agentView.revealed && <AgentAttachment view={agentView} motion={agentMotion} expanded={revealed} onToggle={toggleAgent} />}
-        <div className="aw-body" style={bodyStyle} ref={bodyRef}>
+        <div className="aw-body" style={bodyStyle} ref={bodyRef} onContextMenu={e=>{if((e.target as HTMLElement).closest('input,textarea,[contenteditable="true"]'))return;e.preventDefault();e.stopPropagation();setMenuAt({x:e.clientX,y:e.clientY});}}>
           {titleBar}
           <div className="aw-content" style={deformation?{transform:deformation.contentTransform,willChange:'transform'}:undefined} ref={contentRef} onScrollCapture={(e) => readingProgress.set(win.id, (e.target as HTMLElement).scrollTop)}>
             <Content win={win} peripheral={false} />

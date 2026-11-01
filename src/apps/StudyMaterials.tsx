@@ -2,9 +2,19 @@ import type {WindowState} from '../kernel/types';
 import {kernel,useKernel,workArea} from '../system/kernel';
 import { useStore } from '../system/createStore';
 import { studyTasks, studyTaskStore, type StudyTaskId } from '../study/tasks';
-import StudyPdf from './StudyPdf';
-import StudyQa from './StudyQa';
-import StudyBrowser from './StudyBrowser';
+import StudyPdf,{copyStudyPdfState} from './StudyPdf';
+import StudyQa,{copyStudyQaState} from './StudyQa';
+import StudyBrowser,{copyStudyBrowserState} from './StudyBrowser';
+
+const noteState=new Map<string,string>();
+kernel.onEvent(event=>{if(event.type==='reset')noteState.clear();});
+export function copyStudyMaterialState(sourceId:string,copyId:string){
+  copyStudyPdfState(sourceId,copyId);
+  copyStudyBrowserState(sourceId,copyId);
+  copyStudyQaState(sourceId,copyId);
+  const note=noteState.get(sourceId);
+  if(note!==undefined)noteState.set(copyId,note);
+}
 
 export function openStudyResource(resource:string,title?:string){
   const taskId=studyTaskStore.get().current;
@@ -36,7 +46,7 @@ export default function StudyMaterials({win}:{win:WindowState}){
     <h2>文件</h2>
     {resources.map(item=><button key={item.id} onClick={()=>openStudyResource(item.id)}>{item.title}</button>)}
   </div>;
-  if(resource==='notes')return <div className="study-notes" contentEditable suppressContentEditableWarning aria-label="实验笔记"/>;
+  if(resource==='notes')return <div className="study-notes" contentEditable suppressContentEditableWarning aria-label="实验笔记" ref={element=>{if(element&&!element.dataset.initialized){element.textContent=noteState.get(win.id)??'';element.dataset.initialized='true';}}} onInput={event=>noteState.set(win.id,event.currentTarget.textContent??'')}/>;
   if(resource==='qa')return <StudyQa windowId={win.id} example={studyTasks[taskId].qaExample}/>;
   if(resource==='browser')return <StudyBrowser windowId={win.id}/>;
   const item=resources.find(entry=>entry.id===resource);
