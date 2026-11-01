@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [user-experiment]
   workflow_dispatch:
 
 permissions:
@@ -26,6 +26,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: actions/configure-pages@v5
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
