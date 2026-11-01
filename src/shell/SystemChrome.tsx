@@ -111,6 +111,7 @@ function SystemMenuBarImpl() {
       <button className="mb-item study-mode-trigger" aria-expanded={menu==='study-mode'} onClick={()=>setMenu(menu==='study-mode'?null:'study-mode')}>
         交互形式：{studyMode?studyInteractionModes.find(item=>item.id===studyMode)?.label:'请选择'}
       </button>
+      {studyMode==='screenshot'&&<button className="mb-item" onClick={()=>window.dispatchEvent(new Event('study:screenshot:start'))}>截图</button>}
       <div className="mb-spacer" />
       {agentOn && <span
         className={`agent-service ${status === "ready" || status === "local" ? "ready" : ""}`}

@@ -114,6 +114,19 @@ try{
   assert.ok((await pdfWindow.locator('[aria-label="当前页"]').textContent())?.startsWith('第 2 /'));
   assert.equal(await pdfWindow.locator('.study-pdf-toolbar span').last().textContent(),'120%');
   assert.ok(Math.abs((await pdfScroll.evaluate(element=>element.scrollTop))-beforeScroll)<8,'PDF reading position survives capsule restoration');
+  await selectMode('截图停靠','screenshot');
+  const sourceId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'AutoUE.pdf',rect:{x:190,y:110,w:660,h:620},props:{resource:'pdf',taskId:'screenshot'}}));
+  await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page[data-page="1"] canvas`)?.style.visibility==='visible',sourceId);
+  await page.getByRole('button',{name:'截图',exact:true}).click();
+  assert.equal(await page.locator('.study-screenshot-overlay').count(),1);
+  const paper=await root(sourceId).locator('.study-pdf-page[data-page="1"] canvas').boundingBox();
+  await page.mouse.move(paper.x+70,paper.y+90);await page.mouse.down();
+  await page.mouse.move(paper.x+290,paper.y+270,{steps:10});await page.mouse.up();
+  await page.waitForFunction(()=>window.__aw.kernel.list().some(win=>win.props.resource==='capture'));
+  const captureId=await page.evaluate(()=>window.__aw.kernel.list().find(win=>win.props.resource==='capture')?.id);
+  await page.waitForFunction(id=>!window.__aw.kernel.get(id)?.props.agentMotion,captureId);
+  assert.equal(await root(captureId).locator('.study-captured-image img').count(),1);
+  assert.ok(await page.evaluate(({sourceId,captureId})=>{const k=window.__aw.kernel;return k.get(captureId).rect.x>=k.get(sourceId).rect.x+k.get(sourceId).rect.w-1;},{sourceId,captureId}),'Screenshot docks beside source');
   assert.deepEqual(errors,[]);assert.deepEqual(agentCalls,[]);
-  console.log('PASS: five isolated interaction modes, worm cursor, gestures, window copying, PDF restoration and agent-off isolation.');
+  console.log('PASS: six isolated interaction modes, screenshot docking, worm cursor, window copying, PDF restoration and agent-off isolation.');
 }finally{await browser.close();}

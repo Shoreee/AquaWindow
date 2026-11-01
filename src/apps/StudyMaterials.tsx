@@ -49,6 +49,7 @@ export default function StudyMaterials({win}:{win:WindowState}){
   if(resource==='notes')return <div className="study-notes" contentEditable suppressContentEditableWarning aria-label="实验笔记" ref={element=>{if(element&&!element.dataset.initialized){element.textContent=noteState.get(win.id)??'';element.dataset.initialized='true';}}} onInput={event=>noteState.set(win.id,event.currentTarget.textContent??'')}/>;
   if(resource==='qa')return <StudyQa windowId={win.id} example={studyTasks[taskId].qaExample}/>;
   if(resource==='browser')return <StudyBrowser windowId={win.id}/>;
+  if(resource==='capture')return <div className="study-captured-image"><img src={String(win.props.imageUrl??'')} alt="论文截图"/></div>;
   const item=resources.find(entry=>entry.id===resource);
   if(!item)return null;
   if(item.kind==='pdf')return <StudyPdf windowId={win.id} url={item.url} title={item.title} focused={focused}/>;

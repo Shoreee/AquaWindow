@@ -1,6 +1,6 @@
 import {BASELINE,type Techniques} from '../techniques/techniques';
 
-export type StudyInteractionModeId='yield'|'shake'|'fusion'|'reveal'|'capsule';
+export type StudyInteractionModeId='yield'|'shake'|'fusion'|'reveal'|'capsule'|'screenshot';
 
 export const studyInteractionModes:{id:StudyInteractionModeId;label:string;description:string}[]=[
   {id:'yield',label:'边界退让',description:'拖动前窗压近后窗，观察后窗边缘局部让位。'},
@@ -8,6 +8,7 @@ export const studyInteractionModes:{id:StudyInteractionModeId;label:string;descr
   {id:'fusion',label:'融合与拆分',description:'拖动相邻窗口使其融合；沿连接处拖动可拆开。'},
   {id:'reveal',label:'重要区域透出',description:'右键标题栏框选重点区域，窗口重叠时保持该区域可见。'},
   {id:'capsule',label:'胶囊与提案预览',description:'右键标题栏预览胶囊位置，确认后收纳窗口。'},
+  {id:'screenshot',label:'截图停靠',description:'截取论文内容，图片窗口沿涡虫流动轨迹停靠在主窗口旁。'},
 ];
 
 export function studyTechniques(mode:StudyInteractionModeId|null):Techniques{
@@ -18,6 +19,7 @@ export function studyTechniques(mode:StudyInteractionModeId|null):Techniques{
     case 'fusion':return {...base,fusion:true};
     case 'reveal':return {...base,cutout:true};
     case 'capsule':return {...base,periphery:true};
+    case 'screenshot':return base;
     default:return base;
   }
 }

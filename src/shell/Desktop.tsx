@@ -14,6 +14,7 @@ import { SystemDock, SystemMenuBar } from './SystemChrome';
 import { AgentScene } from './AgentScene';
 import { startAdaptiveRuntime } from '../agent/adaptive/runtime';
 import {TaskCard} from '../study/TaskCard';
+import {ScreenshotCapture} from '../study/ScreenshotCapture';
 
 const development = import.meta.env.DEV && new URLSearchParams(location.search).get('dev') === '1';
 
@@ -141,6 +142,7 @@ export function Desktop() {
       {xray && <div className="xray-hint">X-ray — front layers are see-through · release Space</div>}
       {development ? <><ProposalLayer /><ScenarioPanel /><MenuBar /><ControlCenter /><Dock /></> : <><SystemMenuBar /><SystemDock /></>}
       {!development && <TaskCard />}
+      {!development && studyMode==='screenshot' && <ScreenshotCapture />}
       <Toasts />
       <MissionControl />
       <Switcher />

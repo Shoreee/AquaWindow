@@ -85,6 +85,11 @@
 .study-pdf-page { margin: 0 auto 22px; width: max-content; max-width: 100%; background: #fff; box-shadow: 0 3px 16px #34405a24; }
 .study-pdf-page canvas { box-shadow: none; }
 .study-pdf-page small { display: block; padding: 6px; color: #718099; font-size: 11px; }
+.study-captured-image { height: 100%; overflow: auto; padding: 12px; text-align: center; background: #e9eef3; }
+.study-captured-image img { display: block; max-width: 100%; margin: auto; box-shadow: 0 3px 18px #34405a28; }
+.study-screenshot-overlay { position: fixed; inset: 28px 0 0; z-index: 11000; cursor: crosshair; background: #15394c2b; backdrop-filter: blur(1px); touch-action: none; }
+.study-screenshot-hint { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); padding: 9px 16px; border-radius: 18px; background: #f6ffffed; color: #37596a; box-shadow: 0 8px 25px #1d526b30; font-size: 12px; pointer-events: none; }
+.study-screenshot-selection { position: fixed; border: 2px solid #e8fdff; border-radius: 18px; box-shadow: 0 0 0 9999px #133b5260,0 0 24px #e4fdffaa; pointer-events: none; }
 .study-pdf-loading { margin: 38px auto; color: #718099; font-size: 12px; }
 .study-image-scroll {
   width: 100%;
