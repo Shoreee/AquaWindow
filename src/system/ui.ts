@@ -33,8 +33,8 @@ export interface UiState {
 export const ui = createStore<UiState>({
   condition: 'fluid-agent',
   tech: CONDITIONS[3].techniques,
-  agentEnabled: true,
-  autonomy: 'preview',
+  agentEnabled: false,
+  autonomy: 'off',
   scenarioId: null,
   strategyId: null,
   xray: false,

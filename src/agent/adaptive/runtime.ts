@@ -52,10 +52,11 @@ export const adaptation = new AdaptationSession({
 
 /** Explicit, session-only opt-in. Disabling also discards queued and in-flight model responses. */
 export function setDeepSeekEnabled(enabled: boolean) {
+  if (enabled && !ui.get().agentEnabled) return;
   adaptation.cancel(true);
   planBuffer.setRemoteEnabled(enabled);
   const ctx = context([]);
-  planBuffer.request(ctx, true);
+  if (ui.get().agentEnabled) planBuffer.request(ctx, true);
   if(enabled&&getSessionKey()){serviceStore.set({configured:true,model:'deepseek-flash'});return;}
   if (enabled) void fetch("/api/agent/status")
     .then((response) => response.json())
@@ -77,14 +78,14 @@ export function startAdaptiveRuntime() {
   let key = "";
   const tick = () => {
     if (document.hidden) return;
-    if (!adaptation.active&&!capsuleMotionActive()&&!manualWindowMotionActive()&&!surfaceBusy()) {
+    if (ui.get().agentEnabled&&!adaptation.active&&!capsuleMotionActive()&&!manualWindowMotionActive()&&!surfaceBusy()) {
       const ctx = context([]);
       if (ctx.key !== key) {
         key = ctx.key;
         planBuffer.request(ctx);
       }
     }
-    planBuffer.tick();
+    if (ui.get().agentEnabled) planBuffer.tick();
   };
   const background = window.setInterval(tick, 500);
   let gesture = 0;
@@ -105,6 +106,8 @@ export function startAdaptiveRuntime() {
       'input,textarea,select,[contenteditable="true"],[role="textbox"]',
     );
   const down = (e: KeyboardEvent) => {
+    if ((e.target as HTMLElement | null)?.closest?.('.agent-toggle')) return;
+    if (!ui.get().agentEnabled && e.code === "Space") return;
     if(e.key==='Escape'&&document.querySelector('.window-context-menu'))return;
     if((e.key==='Escape'||(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')&&cancelSurfaceInteraction()){e.preventDefault();e.stopImmediatePropagation();return;}
     if(e.key==='Escape'&&manualWindowMotionActive()){cancelManualWindowMotion();previewCapsuleDrop([]);if(kernel.canUndo())kernel.undo('user');e.preventDefault();e.stopImmediatePropagation();return;}
@@ -154,6 +157,7 @@ export function startAdaptiveRuntime() {
     }
   };
   const capture = (e: PointerEvent | MouseEvent) => {
+    if ((e.target as HTMLElement | null)?.closest?.('.agent-toggle')) return;
     if (!adaptation.active || e.button !== 0) return;
     if((e.target as HTMLElement).closest('.agent-candidate-tabs'))return;
     if((e.target as HTMLElement).closest('.toast button')){if(e.type==='click')adaptation.cancel();e.preventDefault();e.stopImmediatePropagation();return;}

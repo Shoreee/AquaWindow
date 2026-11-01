@@ -5,10 +5,10 @@ import { AppIcon } from "../apps/icons";
 import { APPS } from "../apps/registry";
 import { PAPERS } from "../apps/data/papers";
 import { defaultImportance } from "../apps/importance";
-import { adaptation, serviceStore, setDeepSeekEnabled, setDeepSeekApiKey } from "../agent/adaptive/runtime";
+import { adaptation, planBuffer, serviceStore, setDeepSeekEnabled, setDeepSeekApiKey } from "../agent/adaptive/runtime";
 import { statusMessages } from "../agent/adaptive/buffer";
 import { useStore } from "../system/createStore";
-import { kernel, ui, undo, useKernelState, workArea } from "./hooks";
+import { agent, kernel, ui, undo, useKernelState, workArea } from "./hooks";
 import { openApp } from "./Chrome";
 import { BASELINE } from "../techniques/techniques";
 import { bounded } from "../agent/adaptive/compiler";
@@ -16,6 +16,7 @@ import { bounded } from "../agent/adaptive/compiler";
 export function bootDesktop() {
   cancelSurfaceInteraction();
   adaptation.cancel();
+  agent.stop();
   kernel.closeAll();
   ui.set({
     scenarioId: null,
@@ -87,6 +88,7 @@ function SystemMenuBarImpl() {
   const hasKey=useStore(credentialState,s=>s.hasKey);
   const [apiDraft,setApiDraft]=useState('');
   const phase = useStore(adaptation.store, (s) => s.phase);
+  const agentOn = useStore(ui, (s) => s.agentEnabled);
   const [menu, setMenu] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
   const ref = useRef<HTMLDivElement>(null);
@@ -106,6 +108,19 @@ function SystemMenuBarImpl() {
   const action = (fn: () => void) => () => {
     fn();
     setMenu(null);
+  };
+  const toggleAgent = () => {
+    if (agentOn) {
+      ui.set({ agentEnabled: false, autonomy: 'off' });
+      adaptation.cancel(true);
+      setDeepSeekEnabled(false);
+      planBuffer.entries.clear();
+      agent.stop();
+      agent.reset();
+    } else {
+      ui.set({ agentEnabled: true, autonomy: 'preview' });
+      agent.start();
+    }
   };
   return (
     <div className="menubar system-menubar" ref={ref}>
@@ -132,7 +147,7 @@ function SystemMenuBarImpl() {
         编辑
       </button>
       <div className="mb-spacer" />
-      <span
+      {agentOn && <span
         className={`agent-service ${status === "ready" || status === "local" ? "ready" : ""}`}
         title={statusMessages[status]}
       >
@@ -146,7 +161,10 @@ function SystemMenuBarImpl() {
             : status === "thinking" || status === "warming"
               ? "感知中"
               : "连接待就绪"}
-      </span>
+      </span>}
+      <button type="button" className={`agent-toggle ${agentOn ? 'on' : ''}`} role="switch" aria-checked={agentOn} aria-label="Agent 功能" onClick={toggleAgent}>
+        <span>Agent</span><i aria-hidden="true" />
+      </button>
       <span className="system-date">
         {now.toLocaleString("zh-CN", {
           timeZone: "Asia/Shanghai",
@@ -166,7 +184,7 @@ function SystemMenuBarImpl() {
                 <b>AquaWindow</b>
                 <small>随思绪流动的工作空间</small>
               </div>
-              <button role="switch" aria-checked={remoteEnabled} aria-label="接入 DeepSeek" onClick={action(() => setDeepSeekEnabled(!remoteEnabled))}>
+              {agentOn && <><button role="switch" aria-checked={remoteEnabled} aria-label="接入 DeepSeek" onClick={action(() => setDeepSeekEnabled(!remoteEnabled))}>
                 接入 DeepSeek <span className={`deepseek-toggle ${remoteEnabled ? "on" : ""}`} aria-hidden="true"><i /></span>
               </button>
               <div className="system-connection">{remoteEnabled ? "已允许 DeepSeek 生成方案" : "已关闭 · 本地规则演示，不消耗模型 token"}</div>
@@ -175,10 +193,10 @@ function SystemMenuBarImpl() {
                 <input id="deepseek-api-key" type="password" value={apiDraft} onChange={e=>setApiDraft(e.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder={hasKey?'已填写 · 可输入新 Key 替换':'输入你的 API Key'}/>
                 <div className="deepseek-key-actions"><button type="submit" disabled={!apiDraft.trim()}>保存 Key</button>{hasKey&&<button type="button" onClick={()=>{setDeepSeekApiKey('');setApiDraft('');}}>清除 Key</button>}</div>
                 <small>{hasKey?'Key 仅保留在当前页面，刷新即清空。':'仅保存在当前页面；保存后仍需开启接入。'}</small>
-              </form>
+              </form></>}
               <div className="mb-sep" />
               <button onClick={action(bootDesktop)}>重新整理桌面</button>
-              <div className="system-connection">{statusMessages[status]}</div>
+              <div className="system-connection">{agentOn ? statusMessages[status] : 'Agent 已关闭；手动窗口交互仍可使用。'}</div>
             </>
           )}
           {menu === "windows" && (
@@ -215,11 +233,11 @@ function SystemMenuBarImpl() {
               <button disabled={!kernel.canUndo()} onClick={action(undo)}>
                 撤销布局 <kbd>⌘ Z</kbd>
               </button>
-              <div className="system-connection">
+              {agentOn && <div className="system-connection">
                 长按空格唤出 · 松手停留
                 <br />
                 长按空格探索 · ← → 选择 · 松开采用 · Esc 撤回
-              </div>
+              </div>}
             </>
           )}
         </div>
