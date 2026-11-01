@@ -1,154 +1,154 @@
 <h1 align="center">AquaWindow</h1>
-<p align="center"><strong>Soft boundaries for shared human–agent work</strong></p>
-<p align="center">Tongji University · College of Design and Innovation (D&amp;I)</p>
+<p align="center"><strong>以柔性边界连接人与 Agent 的协作</strong></p>
+<p align="center">同济大学 · 设计创意学院（D&amp;I）</p>
 <p align="center">
-  <a href="https://www.tongji.edu.cn/"><img src="https://img.shields.io/badge/Tongji-University-245879?style=flat-square" alt="Tongji University"></a>
-  <a href="https://www.tongji.edu.cn/"><img src="https://img.shields.io/badge/Tongji-D%26I-245879?style=flat-square" alt="Tongji D&I"></a>
-  <a href="https://github.com/Shoreee/AquaWindow/actions/workflows/pages.yml"><img src="https://github.com/Shoreee/AquaWindow/actions/workflows/pages.yml/badge.svg" alt="Build and deployment"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-586B7B?style=flat-square" alt="MIT license"></a>
+  <a href="https://www.tongji.edu.cn/"><img src="https://img.shields.io/badge/Tongji-University-245879?style=flat-square" alt="同济大学"></a>
+  <a href="https://www.tongji.edu.cn/"><img src="https://img.shields.io/badge/Tongji-D%26I-245879?style=flat-square" alt="同济大学设计创意学院"></a>
+  <a href="https://github.com/Shoreee/AquaWindow/actions/workflows/pages.yml"><img src="https://github.com/Shoreee/AquaWindow/actions/workflows/pages.yml/badge.svg" alt="构建与部署状态"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-586B7B?style=flat-square" alt="MIT 许可证"></a>
 </p>
-<p align="center"><a href="https://shoreee.github.io/AquaWindow/">Try the live prototype</a> · <a href="#interaction-guide">Interaction guide</a> · <a href="#running-locally">Run locally</a></p>
+<p align="center"><a href="https://shoreee.github.io/AquaWindow/">体验在线原型</a> · <a href="#交互指南">交互指南</a> · <a href="#本地运行">本地运行</a></p>
 
-AquaWindow explores how an AI collaborator might inhabit a desktop through its boundaries. Rather than introducing another panel, it treats windows as surfaces that can yield, reveal, carry context, join together, and separate again. The interface makes these changes tangible through a shared language of soft membranes, flowing white material, and restrained optical dispersion.
+AquaWindow 探索 AI 协作者如何通过窗口边界融入桌面。窗口被视作能够退让、透出内容、携带上下文、相互连接与拆分的表面。柔软的膜、流动的白色材质和克制的光学色散，构成这些变化共同的视觉语言。
 
-This is an interactive research prototype built in the browser. Its documents, files, and application windows form a simulated workspace, allowing the interaction language to be explored without granting control over the operating system.
+这是一个在浏览器中运行的交互研究原型。文档、文件和应用窗口共同组成模拟工作区，使人们无需授予系统级控制权限，也能体验这套交互语言。
 
-## Design philosophy
+## 设计理念
 
-**Boundaries are places to collaborate.** A window edge can make space for a task, expose an important region underneath, or hold a relationship to another window. Collaboration becomes part of the workspace rather than a separate destination.
+**边界是协作发生的地方。** 窗口边缘可以为当前任务让出空间、露出下方的重要区域，或表达与另一窗口的关系。协作由此发生在工作区中。
 
-**Motion should explain causality.** An agent's material extends from its core, works on an object, and returns. A moving window is gradually enveloped in a membrane and released at its destination. The effect communicates what is acting, where it acts, and when the operation is complete.
+**动效应解释因果。** Agent 的材质从核心延伸出去，作用于对象，再返回核心。窗口移动时，膜逐渐包裹它，并在抵达目标位置后释放。动效让人看清作用者、作用位置和操作完成的时刻。
 
-**People and agents share a material language.** A manual resize and an agent-driven boundary adjustment use the same flowing edge. Direct manipulation remains immediate: dragging never waits for the membrane to finish spreading. The cursor retains its continuous transformation into the agent core when the agent is explicitly summoned; ordinary manual actions do not summon it.
+**人与 Agent 共用一套材质语言。** 手动调整窗口大小和 Agent 调整边界使用相同的流动边缘。直接操作必须即时响应：拖动不等待膜的扩展动画结束。只有明确唤起 Agent 时，光标才连续变形为 Agent 核心；普通手动操作不会唤起它。
 
-**Connections should feel reversible.** Related windows can adhere along a living seam and travel together. Pulling along the seam opens the connection under tension. Releasing early lets it flow back; reaching the far end separates the surfaces. There are no zipper teeth or additional creature icons—the boundary itself carries the interaction.
+**连接应当可逆。** 相关窗口可以沿着流动的接缝黏合，并一起移动。沿接缝拉动会让连接在张力下打开；提前松手，接缝会回流；拉到末端，表面才分离。交互由边界本身承载，不使用拉链齿或额外的生物图标。
 
-## In motion
+## 动态演示
 
-The GIFs below are recordings of the running prototype, not rendered concept animations. The current interface uses Chinese labels; the controls are described in English below.
+以下 GIF 录制自运行中的原型，并非概念动画。当前界面使用中文标签。
 
-### From cursor to collaborator
+### 从光标到协作者
 
-Hold Space to grow the cursor into the agent, choose objects, and explore adaptive layouts.
+按住空格键，让光标逐渐变为 Agent，选择对象并查看自适应布局方案。
 
-![Continuous cursor-to-core transformation and adaptive previews](docs/figures/agent-interaction.gif)
+![光标连续变形为核心及自适应方案预览](docs/figures/agent-interaction.gif)
 
-### A membrane that travels with the window
+### 随窗口移动的膜
 
-The swallowing front spreads from the initial pointer location during manual movement. Automatic relocation begins at a corner and envelops the window before carrying it.
+手动移动窗口时，包裹的前沿从最初的指针位置扩散。自动移动则从窗口一角开始，先包裹窗口，再将其带到目标位置。
 
-![Immediate manual movement with slowly spreading material](docs/figures/manual-membrane.gif)
+![即时手动移动与缓慢扩展的材质](docs/figures/manual-membrane.gif)
 
-### Related surfaces, shared movement
+### 相连表面，共同移动
 
-Fuse related windows, move them as one group, then pull their seam apart. An incomplete pull returns to the joined state; a complete pull releases the windows.
+融合相关窗口，让它们作为一组移动，再拉开接缝。拉动距离不足时会恢复连接；拉到末端后才会分离。
 
-![Window fusion, partial separation and complete release](docs/figures/surface-fusion.gif)
+![窗口融合、部分拆分与完全分离](docs/figures/surface-fusion.gif)
 
-## Interaction guide
+## 交互指南
 
-| Input | Result |
+| 输入 | 结果 |
 | --- | --- |
-| Hold **Space** | Grow the cursor into the agent and enter object selection. |
-| Click windows while holding Space, before the burst | Add or remove objects; each change resets the selection countdown. |
-| Make no selection | All eligible windows are selected when the countdown expires. |
-| **← / →** after the burst | Switch between seven independent candidates. Previews do not auto-cycle. |
-| Release **Space** | Accept the current candidate and let its animation complete. |
-| **Esc**, **⌘/Ctrl Z**, or the Undo prompt | Cancel or undo the operation. |
-| Drag a title bar or resize handle | Manipulate the actual window immediately, with shared membrane feedback. |
-| Move related edges close together and release | Preview and create a surface bond. |
-| Right-click a title bar, or press **Shift F10** on it | Open window actions: collect, fuse, move through depth, maximize, or close. |
-| Shrink a window to a small corner-sized surface, then release | Collect it into the same session capsule used by the agent. |
-| Drag either fused title bar | Move the joined windows together. |
-| Pull a seam from one end to the other | Separate only after reaching the end; otherwise it flows back. **End** provides keyboard completion. |
+| 按住 **Space（空格）** | 光标变为 Agent，进入对象选择状态。 |
+| 按住空格且尚未触发扩散时点击窗口 | 添加或移除对象；每次改变都会重置选择倒计时。 |
+| 不选择任何对象 | 倒计时结束后，选中所有符合条件的窗口。 |
+| 扩散后按 **← / →** | 在七个独立方案间切换；预览不会自动轮播。 |
+| 松开 **Space** | 接受当前方案，等待动画完成。 |
+| 按 **Esc**、**⌘/Ctrl Z**，或点击撤销提示 | 取消或撤销操作。 |
+| 拖动标题栏或缩放手柄 | 立即操作实际窗口，同时显示膜状反馈。 |
+| 将相关窗口的边缘靠近并松手 | 预览并建立表面连接。 |
+| 右键点击标题栏，或在标题栏上按 **Shift F10** | 打开窗口操作菜单：收纳、融合、调整纵深、最大化或关闭。 |
+| 将窗口缩小到接近角落的小尺寸后松手 | 将其收入与 Agent 共用的会话胶囊。 |
+| 拖动任一已融合窗口的标题栏 | 一起移动相连窗口。 |
+| 从接缝一端拉到另一端 | 到达末端才分离，否则接缝回流。也可按 **End** 完成键盘操作。 |
 
-### Seven adaptive candidates
+### 七种自适应方案
 
-| Candidate | What changes |
+| 方案 | 变化 |
 | --- | --- |
-| **Central reveal** | Open a rounded rectangular aperture in the upper surface to expose important content below, relocating it when useful. |
-| **Corner reveal** | Peel open an outside corner. Only the cut edge receives material feedback; the underlying page stays plain. |
-| **Yield** | Pull a boundary, with a one-sided travelling wave in its direction of motion. Adjacent edges can participate in a corner drag. |
-| **Encapsulate** | Gather windows sequentially into a compact, editable session capsule. |
-| **Branch** | Develop independent result windows from the original context through a soft division. |
-| **Merge** | Bring results together and join relevant working surfaces with a detachable liquid seam. |
-| **Permeate** | Move a surface through depth layers with a ripple-like transition. |
+| **中央透出** | 在上层表面打开圆角矩形开口，露出下方的重要内容；必要时调整开口位置。 |
+| **掀角透出** | 掀开外侧一角。只有切开的边缘显示材质反馈，下方页面保持原样。 |
+| **边界退让** | 拉动边界，使波纹沿移动方向单侧传播；拖动角落时，相邻边缘也可参与。 |
+| **胶囊收纳** | 依次把窗口收入紧凑、可编辑的会话胶囊。 |
+| **分支** | 通过柔和的分裂，从原有上下文中生成独立的结果窗口。 |
+| **合并** | 汇集结果，用可拆开的流动接缝连接相关工作表面。 |
+| **穿透** | 让表面在纵深层级间移动，并以类似涟漪的过渡呈现。 |
 
-Anchoring remains the underlying selection relationship rather than occupying an extra layout candidate. Both reveal forms can be closed by dragging their exposed boundary.
+锚定是底层的选择关系，不另占一个布局方案。拖动露出的边界，可以关闭两种透出效果。
 
-### Session capsules
+### 会话胶囊
 
-Capsules retain the actual pages, document identity, and reading position. Each incoming page adds a segment and increases the capsule's capacity.
+胶囊保留实际页面、文档身份和阅读位置。每加入一个页面，就增加一个分段与相应容量。
 
-- Hover a segment to identify its page by title.
-- Drag another window or capsule onto the capsule to add it with a flowing ingress animation.
-- Drop a capsule onto a window title bar to make it an attachment; drag it back out to detach it.
-- Capsules can contain capsules or accompany other capsules. Nested extraction preserves the inner container and its pages; circular containment is rejected.
-- Drag or resize the capsule; page previews hide during manipulation.
-- **Option/Alt-drag** a segment to release just that page, including the original host page.
-- Stretch the capsule beyond its capacity to release the pages in sequence, or use its release button.
-- Undo restores the preceding session state.
+- 将鼠标悬停在分段上，可通过标题辨认页面。
+- 把另一个窗口或胶囊拖到胶囊上，可通过流入动画将其加入。
+- 将胶囊放到窗口标题栏上，可把它变为附件；向外拖动可解除附着。
+- 胶囊可包含其他胶囊，也可与其他胶囊并行存在。从嵌套胶囊中提取内容时，内部容器及其页面会保留；系统会拒绝循环包含。
+- 拖动或缩放胶囊时，页面预览会暂时隐藏。
+- 按住 **Option/Alt** 拖动某个分段，可只释放该页面，包括原来的宿主页。
+- 将胶囊拉伸到超过容量，可依次释放页面；也可以使用释放按钮。
+- 撤销可恢复此前的会话状态。
 
-### Capsules as recursive context
+### 胶囊承载嵌套上下文
 
-A small container can accompany a working window in its title bar. Collecting that window preserves the attachment, and containers can themselves be nested. Ingress, undocking, and release use the same membrane language as collection.
+小容器可以附着在工作窗口的标题栏上。收纳该窗口时，附件关系会保留；容器本身也可以嵌套。流入、解除附着和释放都沿用收纳时的膜状语言。
 
-![Collecting, title-bar docking, adding pages and nesting capsules](docs/figures/recursive-capsules.gif)
+![收纳、标题栏附着、添加页面与胶囊嵌套](docs/figures/recursive-capsules.gif)
 
-## Running locally
+## 本地运行
 
-Use a current Node.js LTS release and pnpm 9 or later.
+使用当前的 Node.js LTS 版本和 pnpm 9 或更高版本。
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Open the Vite URL printed in the terminal, normally `http://localhost:5173`. Development also starts the optional local agent service on port `8787`. No API key is needed for the deterministic local previews.
+打开终端输出的 Vite 地址，通常是 `http://localhost:5173`。开发模式也会在 `8787` 端口启动可选的本地 Agent 服务。确定性的本地预览无需 API 密钥。
 
-To run the production build locally:
+如需在本地运行生产构建：
 
 ```bash
 pnpm build
 pnpm start
 ```
 
-Open `http://127.0.0.1:8787`. GitHub Pages serves the browser build directly.
+打开 `http://127.0.0.1:8787`。GitHub Pages 会直接提供浏览器构建版本。
 
-## Optional DeepSeek integration
+## 可选的 DeepSeek 集成
 
-DeepSeek is **off by default**. Open **AquaWindow** in the top-left menu, enter an API key, save it, and explicitly enable the provider. Saving a key alone does not start requests.
+DeepSeek **默认关闭**。在左上角菜单中打开 **AquaWindow**，输入并保存 API 密钥，再明确启用服务提供方。仅保存密钥不会发起请求。
 
-A visitor's key stays in the current page's memory. It is not written to localStorage, sessionStorage, the repository, or build artifacts, and it is cleared on reload. Requests with a page-entered key go directly to the official DeepSeek HTTPS endpoint. Clearing or replacing the key disables access and aborts outstanding work. Enabling the provider sends the current workspace context for candidate generation.
+访客输入的密钥只保存在当前页面的内存中，不会写入 localStorage、sessionStorage、代码仓库或构建产物；刷新页面后即清除。使用页面输入的密钥时，请求会直接发往 DeepSeek 官方 HTTPS 接口。清除或替换密钥会停用访问，并中止未完成的请求。启用服务提供方后，当前工作区上下文会用于生成候选方案。
 
-For local development, a server-side key can alternatively be configured in the ignored environment file:
+本地开发也可以在被 Git 忽略的环境文件中配置服务端密钥：
 
 ```bash
 cp .env.example .env.local
-# Set DEEPSEEK_API_KEY locally; never use a VITE_ prefix for a secret.
+# 在本地设置 DEEPSEEK_API_KEY；不要给密钥使用 VITE_ 前缀。
 ```
 
-Server-mode replay traces are stored under the ignored `log/` directory. Page-entered keys are not written into those traces. The publication workflow scans source files and build artifacts for credentials before deployment.
+服务端模式的回放记录存放在被忽略的 `log/` 目录。页面输入的密钥不会写入这些记录。发布流程会在部署前扫描源码和构建产物中的凭据。
 
-## Implementation
+## 实现方式
 
-The interface combines native DOM documents with a WebGL material layer. Window movement and shape changes affect actual layout state, while the flowing core and donated ribbons share a continuous material model. The body is clipped with lightweight vector contours rather than a full-window raster displacement filter.
+界面结合原生 DOM 文档与 WebGL 材质层。窗口移动和形状变化会改变真实的布局状态；流动核心与延展出的带状材质共享一套连续材质模型。窗口主体使用轻量的矢量轮廓裁切，而非对整个窗口应用栅格位移滤镜。
 
 ```text
 src/
-  kernel/              Window state, gestures, history, and undo
-  agent/adaptive/      Context, local candidates, provider access, and choreography
-  field/               WebGL core, material flow, and ribbon rendering
-  shell/               Desktop, window surfaces, capsules, and tension seams
-  apps/                Simulated applications and document state
-  techniques/          Compositing, depth, reveal, and layout geometry
-server/                Optional local provider service and trace recording
-scripts/               Browser regression checks and demo capture
+  kernel/              窗口状态、手势、历史记录与撤销
+  agent/adaptive/      上下文、本地候选方案、服务接入与动效编排
+  field/               WebGL 核心、材质流动与带状渲染
+  shell/               桌面、窗口表面、胶囊与张力接缝
+  apps/                模拟应用与文档状态
+  techniques/          合成、纵深、透出与布局几何
+server/                可选的本地服务与回放记录
+scripts/               浏览器回归检查与演示录制
 ```
 
-`AgentMotion` is the shared contract between layout choreography and visible material response. Surface bonds deform the actual window silhouettes rather than drawing a bridge over them. They live alongside the windows, so moving, closing, undoing, or separating a group operates on the same underlying state. Document trees are memoized independently of presentation frames to preserve editing and avoid re-rendering text during animation.
+`AgentMotion` 是布局动效与可见材质反馈之间的共享约定。表面连接会改变实际窗口轮廓，而不是在窗口上方另画一座桥。连接与窗口共用底层状态，因此移动、关闭、撤销或拆分一组窗口时，操作的是同一份状态。文档树独立于展示帧进行缓存，以保留编辑内容，并避免动画期间重复渲染文字。
 
-## Validation and contribution
+## 验证与贡献
 
 ```bash
 pnpm typecheck
@@ -157,7 +157,7 @@ pnpm build
 pnpm check:secrets
 ```
 
-With the development server running, browser checks cover the interaction paths:
+启动开发服务器后，可运行覆盖各条交互路径的浏览器检查：
 
 ```bash
 pnpm test:e2e
@@ -171,14 +171,14 @@ pnpm test:render
 pnpm test:keys
 ```
 
-Browser checks use a locally installed Chrome through `playwright-core`; provider checks use fixtures rather than paid model calls. Set `AW_URL` to test another running instance. The GIF capture script additionally requires `ffmpeg`. With a production preview running on port 4177, use `pnpm capture:readme` to regenerate the recordings.
+浏览器检查通过 `playwright-core` 使用本机安装的 Chrome；服务提供方检查使用测试数据，不调用付费模型。设置 `AW_URL` 可测试另一个正在运行的实例。GIF 录制脚本还需要 `ffmpeg`。在 `4177` 端口运行生产预览时，可用 `pnpm capture:readme` 重新生成演示录屏。
 
-This prototype is still being refined. The included research documents and numerical examples are fixtures, not claims about published experimental results. Notes on choreography and rendering measurements are available in [the interaction notes](docs/embodied-interaction.md) and [performance notes](docs/animation-performance.md).
+原型仍在完善中。仓库里的研究文档和数值示例是测试素材，不代表已发表的实验结果。动效与渲染测量的记录见[交互说明](docs/embodied-interaction.md)和[性能说明](docs/animation-performance.md)。
 
-Issues and contributions are welcome, particularly around continuity, boundary legibility, accessible alternatives, and how these interactions support real collaborative tasks.
+欢迎提交问题与贡献，尤其是关于动效连续性、边界可辨性、无障碍替代操作，以及这些交互如何支持真实协作任务的建议。
 
-## Project and related work
+## 项目与相关作品
 
-Created by [Shoreee](https://github.com/Shoreee). For another interaction-led project by the author, see [LastStroke](https://github.com/Shoreee/LastStroke), a shared-drawing multiplayer game.
+项目由 [Shoreee](https://github.com/Shoreee) 创建。作者的另一项交互作品是多人共享绘画游戏 [LastStroke](https://github.com/Shoreee/LastStroke)。
 
-AquaWindow is released under the [MIT License](LICENSE).
+AquaWindow 基于 [MIT 许可证](LICENSE)发布。
