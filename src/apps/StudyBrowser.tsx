@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {kernel} from '../system/kernel';
 
-const root='/study/external/';
+const root=`${import.meta.env.BASE_URL}study/external/`;
 const pages=[
   {
     id:'bilibili',

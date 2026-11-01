@@ -5,7 +5,8 @@ export type StudyTaskId = 'comparison' | 'screenshot' | 'bilingual' | 'external'
 export type StudyResource = { id: string; title: string; url: string; kind: 'pdf' | 'image' };
 export type StudyAnswerExample = { question: string; sentences: string[] };
 
-const externalRoot = '/study/external/';
+const studyRoot = `${import.meta.env.BASE_URL}study/`;
+const externalRoot = studyRoot + 'external/';
 
 export const studyTasks: Record<StudyTaskId, {
   label: string;
@@ -23,11 +24,11 @@ export const studyTasks: Record<StudyTaskId, {
     description: '请完成两组内容对照：',
     steps: ['方法论中的系统说明与架构图。', '正文提到的附录内容与对应附录图。'],
     resources: [
-      { id: 'pdf', title: 'AutoUE.pdf', url: '/study/auto-ue/AutoUE.pdf', kind: 'pdf' },
-      { id: 'methodology', title: '方法论.png', url: '/study/auto-ue/methodology.png', kind: 'image' },
-      { id: 'architecture', title: '架构图.png', url: '/study/auto-ue/architecture.png', kind: 'image' },
-      { id: 'appendix-reference', title: '正文提及附录部分.png', url: '/study/auto-ue/appendix-reference.png', kind: 'image' },
-      { id: 'appendix', title: '附录.png', url: '/study/auto-ue/appendix.png', kind: 'image' },
+      { id: 'pdf', title: 'AutoUE.pdf', url: studyRoot + 'auto-ue/AutoUE.pdf', kind: 'pdf' },
+      { id: 'methodology', title: '方法论.png', url: studyRoot + 'auto-ue/methodology.png', kind: 'image' },
+      { id: 'architecture', title: '架构图.png', url: studyRoot + 'auto-ue/architecture.png', kind: 'image' },
+      { id: 'appendix-reference', title: '正文提及附录部分.png', url: studyRoot + 'auto-ue/appendix-reference.png', kind: 'image' },
+      { id: 'appendix', title: '附录.png', url: studyRoot + 'auto-ue/appendix.png', kind: 'image' },
     ],
   },
   screenshot: {
@@ -37,7 +38,7 @@ export const studyTasks: Record<StudyTaskId, {
     description: '目标图像是 AutoUE.pdf 中的 Figure 1：“An example of game scene and gameplay”（游戏场景与玩法示例图）。',
     steps: ['从“文件”打开 AutoUE.pdf，找到 Figure 1。', '截取该图，粘贴或拖入 AI 问答窗口，再切回论文原来的阅读位置。'],
     resources: [
-      { id: 'pdf', title: 'AutoUE.pdf', url: '/study/screenshot-transfer/AutoUE.pdf', kind: 'pdf' },
+      { id: 'pdf', title: 'AutoUE.pdf', url: studyRoot + 'screenshot-transfer/AutoUE.pdf', kind: 'pdf' },
     ],
   },
   bilingual: {
@@ -47,8 +48,8 @@ export const studyTasks: Record<StudyTaskId, {
     description: '阅读中文版论文时，遇到表达不清的地方，临时查看英文原文，再回到刚才的中文阅读位置。',
     steps: ['从“文件”打开中文版和英文版论文。', '在两个窗口之间切换或并排对照，保持各自的阅读位置。'],
     resources: [
-      { id: 'chinese-pdf', title: 'Constraint Is All You Need 中文版.pdf', url: '/study/bilingual/constraint-zh.pdf', kind: 'pdf' },
-      { id: 'english-pdf', title: 'Constraint Is All You Need.pdf', url: '/study/bilingual/constraint-en.pdf', kind: 'pdf' },
+      { id: 'chinese-pdf', title: 'Constraint Is All You Need 中文版.pdf', url: studyRoot + 'bilingual/constraint-zh.pdf', kind: 'pdf' },
+      { id: 'english-pdf', title: 'Constraint Is All You Need.pdf', url: studyRoot + 'bilingual/constraint-en.pdf', kind: 'pdf' },
     ],
   },
   external: {
@@ -69,8 +70,8 @@ export const studyTasks: Record<StudyTaskId, {
     steps: ['从“文件”打开 AutoUE.pdf，定位需要查阅的引用。', '在“文件”中自行找到 TexVerse: A Universe of 3D Objects with High-Resolution Textures，或 UnrealLLM: Towards Highly Controllable and Interactable 3D Scene Generation by LLM-powered Procedural Content Generation。', '打开引用论文阅读后，通过窗口切换回 AutoUE，继续原来的页码与页内位置。'],
     resources: [
       { id: 'pdf', title: 'AutoUE.pdf', url: externalRoot + 'AutoUE.pdf', kind: 'pdf' },
-      { id: 'texverse', title: 'TexVerse.pdf', url: '/study/citations/TexVerse.pdf', kind: 'pdf' },
-      { id: 'unrealllm', title: 'UnrealLLM.pdf', url: '/study/citations/UnrealLLM.pdf', kind: 'pdf' },
+      { id: 'texverse', title: 'TexVerse.pdf', url: studyRoot + 'citations/TexVerse.pdf', kind: 'pdf' },
+      { id: 'unrealllm', title: 'UnrealLLM.pdf', url: studyRoot + 'citations/UnrealLLM.pdf', kind: 'pdf' },
     ],
   },
   answer: {
