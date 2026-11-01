@@ -33,11 +33,12 @@ export function restoreCapsule(id:string,continuingGesture=false){
  animating=true;
  const source=renderedCapsuleRect(id)??host.capsuleRect??host.rect,carrier=`capsule-release:${id}:${Math.round(performance.now())}`,start=performance.now();
  const restoredMembers=snapshot.members.map(member=>restored(member,snapshot));
+ const originalIds=new Set([...Object.keys(initial.windows),...snapshot.members.map(member=>member.id),carrier]);
  beginMaterial([carrier]);
  const duration=.22+Math.max(0,snapshot.members.length-1)*.16+.72;
  const animate=(now:number)=>{
   if(!animating)return;
-  const elapsed=(now-start)/1000,windows={...initial.windows};
+  const elapsed=(now-start)/1000,live=kernel.getState(),windows={...initial.windows};
   delete windows[id];
   const rupture=ease(elapsed/.65);
   windows[carrier]={...host,id:carrier,form:'capsule',minimized:false,capsuleRect:source,props:{...host.props,agentCapsuleBusy:true,agentCapsuleRupture:rupture}};
@@ -49,8 +50,11 @@ export function restoreCapsule(id:string,continuingGesture=false){
   }
   const finished=elapsed>=duration;
   if(finished){delete windows[carrier];for(const member of restoredMembers){windows[member.id]=member;readingProgress.set(member.id,snapshot.scroll[member.id]??0);}}
-  const order=[...snapshot.order.filter(key=>windows[key]),...initial.order.filter(key=>windows[key]&&!snapshot.order.includes(key)),...(!finished?[carrier]:[])];
-  kernel.previewState({...initial,windows,order,focusedId:finished?(windows[snapshot.focusedId??'']?snapshot.focusedId:snapshot.members[0]?.id??null):carrier});
+  // Keep windows opened while the release animation is running.
+  for(const [liveId,liveWindow] of Object.entries(live.windows))if(!originalIds.has(liveId))windows[liveId]=liveWindow;
+  const order=[...snapshot.order.filter(key=>windows[key]),...initial.order.filter(key=>windows[key]&&!snapshot.order.includes(key)),...live.order.filter(key=>windows[key]&&!originalIds.has(key)),...(!finished?[carrier]:[])];
+  const lateFocus=live.focusedId&&!originalIds.has(live.focusedId)&&windows[live.focusedId]?live.focusedId:null;
+  kernel.previewState({...initial,windows,order,focusedId:lateFocus??(finished?(windows[snapshot.focusedId??'']?snapshot.focusedId:snapshot.members[0]?.id??null):carrier)});
   if(finished){stop();kernel.endGesture();toast('已依次释放窗口',true);}else animation=requestAnimationFrame(animate);
  };
  animation=requestAnimationFrame(animate);

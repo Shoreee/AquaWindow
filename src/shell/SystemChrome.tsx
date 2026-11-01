@@ -24,7 +24,9 @@ export function bootDesktop() {
     tech: {
       ...BASELINE,
       shape: "squircle",
-      depth: true,
+      yield: "deform",
+      cutout: true,
+      fusion: true,
       snap: true,
       periphery: true,
       semanticFiles: true,
@@ -201,12 +203,12 @@ function SystemMenuBarImpl() {
 }
 
 function SystemDockImpl() {
-  const apps=[{id:'finder',label:'文件',resource:'files'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'}];
+  const apps=[{id:'finder',label:'文件',resource:'files'},{id:'browser',label:'浏览器',resource:'browser'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'}];
   const running=useKernelState(s=>apps.reduce((bits,app,index)=>Object.values(s.windows).some(w=>w.appId==='study'&&w.props.resource===app.resource&&!w.minimized)?bits|(1<<index):bits,0));
   return (
     <div className="dock-wrap">
       <div className="dock system-dock">
-        {apps.map((app,index)=><button className="dock-i" key={app.id} aria-label={`打开${app.label}`} onClick={()=>openStudyResource(app.resource,app.resource==='notes'?'实验笔记':app.resource==='qa'?'AI 问答':'文件')}>
+        {apps.map((app,index)=><button className="dock-i" key={app.id} aria-label={`打开${app.label}`} onClick={()=>openStudyResource(app.resource,app.resource==='notes'?'实验笔记':app.resource==='qa'?'AI 问答':app.resource==='browser'?'浏览器':'文件')}>
           <span className="dock-tip">{app.label}</span>
           <span className="dock-img"><AppIcon appId={app.id} size={45}/></span>
           {(running&(1<<index))!==0&&<span className="dock-dot"/>}

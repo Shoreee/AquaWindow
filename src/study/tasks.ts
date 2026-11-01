@@ -2,11 +2,10 @@ import { createStore } from '../system/createStore';
 import { kernel } from '../system/kernel';
 
 export type StudyTaskId = 'comparison' | 'screenshot' | 'bilingual' | 'external' | 'citation' | 'answer';
-export type StudyResource = { id: string; title: string; url: string; kind: 'pdf' | 'image' | 'web' };
+export type StudyResource = { id: string; title: string; url: string; kind: 'pdf' | 'image' };
 export type StudyAnswerExample = { question: string; sentences: string[] };
 
 const externalRoot = '/study/external/';
-const bilibiliSnapshot = 'AutoUE_ Automated 3D Game Generation in Unreal Engine via Multi-Agent Systems_哔哩哔哩_bilibili.html';
 
 export const studyTasks: Record<StudyTaskId, {
   label: string;
@@ -35,11 +34,10 @@ export const studyTasks: Record<StudyTaskId, {
     label: '任务 02 · 截图转移',
     switchLabel: '任务 02',
     title: '截图转移',
-    description: '在论文中找到目标图像，截图并转移到 AI 问答窗口，再返回原来的阅读位置。',
-    steps: ['从“文件”打开 AutoUE.pdf。', '将目标图像截图，粘贴或拖入 AI 问答窗口。'],
+    description: '目标图像是 AutoUE.pdf 中的 Figure 1：“An example of game scene and gameplay”（游戏场景与玩法示例图）。',
+    steps: ['从“文件”打开 AutoUE.pdf，找到 Figure 1。', '截取该图，粘贴或拖入 AI 问答窗口，再切回论文原来的阅读位置。'],
     resources: [
       { id: 'pdf', title: 'AutoUE.pdf', url: '/study/screenshot-transfer/AutoUE.pdf', kind: 'pdf' },
-      { id: 'figure-reference', title: '目标图参考.png', url: '/study/screenshot-transfer/figure-reference.png', kind: 'image' },
     ],
   },
   bilingual: {
@@ -57,20 +55,18 @@ export const studyTasks: Record<StudyTaskId, {
     label: '任务 04 · 外部材料与返回',
     switchLabel: '任务 04',
     title: '打开外部材料并返回',
-    description: '阅读 AutoUE 时打开演示视频页或项目仓库，浏览后返回论文，继续刚才的位置。',
-    steps: ['从“文件”打开 AutoUE.pdf，移动到需要查看外部材料的页面。', '通过论文窗口的“相关材料”打开离线网页存档。', '点击“返回论文”，确认页码和缩放保持不变。'],
+    description: '阅读 AutoUE 时，打开 AutoUE 的 Bilibili 演示视频页和 GitHub 项目仓库 Pluto156/AutoUE，浏览后回到论文原来的位置。',
+    steps: ['从“文件”打开 AutoUE.pdf，移动到需要查看外部材料的页面。', '从 Dock 打开“浏览器”，自行搜索 AutoUE 演示视频和 Pluto156/AutoUE 项目仓库。', '通过窗口切换回到论文，继续刚才的页码和页内位置。'],
     resources: [
       { id: 'pdf', title: 'AutoUE.pdf', url: externalRoot + 'AutoUE.pdf', kind: 'pdf' },
-      { id: 'bilibili', title: 'AutoUE 演示视频页 · Bilibili', url: externalRoot + encodeURIComponent(bilibiliSnapshot), kind: 'web' },
-      { id: 'github', title: 'AutoUE 项目仓库 · GitHub', url: externalRoot + 'Pluto156_AutoUE.html', kind: 'web' },
     ],
   },
   citation: {
     label: '任务 05 · 返回引用来源',
     switchLabel: '任务 05',
     title: '返回引用来源',
-    description: '从 AutoUE 查看引用论文，再返回主论文原来的阅读位置。',
-    steps: ['从“文件”打开 AutoUE.pdf，定位需要查阅的引用。', '通过论文窗口的“引用文献”打开 TexVerse 或 UnrealLLM。', '浏览后点击“返回 AutoUE”，继续原来的页码与页内位置。'],
+    description: '从 AutoUE 查找并阅读引用文献，再通过普通窗口切换回主论文原来的位置。',
+    steps: ['从“文件”打开 AutoUE.pdf，定位需要查阅的引用。', '在“文件”中自行找到 TexVerse: A Universe of 3D Objects with High-Resolution Textures，或 UnrealLLM: Towards Highly Controllable and Interactable 3D Scene Generation by LLM-powered Procedural Content Generation。', '打开引用论文阅读后，通过窗口切换回 AutoUE，继续原来的页码与页内位置。'],
     resources: [
       { id: 'pdf', title: 'AutoUE.pdf', url: externalRoot + 'AutoUE.pdf', kind: 'pdf' },
       { id: 'texverse', title: 'TexVerse.pdf', url: '/study/citations/TexVerse.pdf', kind: 'pdf' },

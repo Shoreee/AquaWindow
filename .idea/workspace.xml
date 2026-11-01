@@ -11,15 +11,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3789fe63-47b7-4ff7-b260-66ac6da236d5" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pnpm-lock.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/agent/adaptive/manualMotion.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/agent/adaptive/manualMotion.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/agent/adaptive/runtime.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/agent/adaptive/runtime.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/apps/registry.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/registry.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/field/agentRenderer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/field/agentRenderer.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/shell/AgentScene.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/AgentScene.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/shell/Desktop.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/Desktop.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/research/paper-reading-experiment-environment.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/research/paper-reading-experiment-environment.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/agent/adaptive/capsule.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/agent/adaptive/capsule.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/StudyMaterials.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyMaterials.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/StudyPdf.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyPdf.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/StudyQa.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyQa.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/StudyWeb.tsx" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/shell/SystemChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/SystemChrome.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/Window.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/Window.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/WindowMenu.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/WindowMenu.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/surfaceFusion.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/surfaceFusion.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/tasks.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/tasks.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/styles/agent.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/styles/agent.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -117,7 +120,9 @@
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
     <MESSAGE value="Soften fusion junctions and add flowing boundary anticipation" />
     <MESSAGE value="新增 Agent 总开关并默认关闭自适应感知" />
-    <option name="LAST_COMMIT_MESSAGE" value="新增 Agent 总开关并默认关闭自适应感知" />
+    <MESSAGE value="新增学习工作区界面与任务卡片，并优化拖拽光标联动" />
+    <MESSAGE value="无法生成提交信息：本次代码变更内容为空，没有可供分析的代码差异。请提供具体的变更内容。" />
+    <option name="LAST_COMMIT_MESSAGE" value="无法生成提交信息：本次代码变更内容为空，没有可供分析的代码差异。请提供具体的变更内容。" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

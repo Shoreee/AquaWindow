@@ -3,10 +3,11 @@ import {useStore} from '../system/createStore';
 import {DockedCapsules} from './DockedCapsules';
 import {dockParent} from '../agent/adaptive/capsuleTree';
 import {NativeBondSkin} from './NativeBondSkin';
-import {cancelSurfaceInteraction,fuseSurfaces,previewSurfaceFusion,surfaceUi} from './surfaceFusion';
+import {cancelSurfaceInteraction,fuseSurfaces,previewSurfaceFusion,shakeApart,surfaceUi} from './surfaceFusion';
 import {attachedResize,isSurfaceGroup,surfaceBonds,surfaceComponent} from './surfaceBondGeometry';
 import {TransportSkin} from './TransportSkin';
 import {cancelCapsuleMotion,packWindows,previewCapsuleDrop,finishCapsuleDrop,capsuleDropUi} from "../agent/adaptive/capsule";
+import {capsuleSize} from '../agent/adaptive/capsuleGeometry';
 import {beginWindowMotion,cancelManualWindowMotion,maximizeWithMotion} from "../agent/adaptive/manualMotion";
 import { ease as motionEase } from "../agent/adaptive/choreography";
 import type { AgentMotion } from "../agent/adaptive/choreography";
@@ -81,6 +82,9 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   const def = APPS[win.appId];
   const [menuAt,setMenuAt]=useState<{x:number;y:number}|null>(null);
   const closeMenu=useCallback(()=>setMenuAt(null),[]);
+  const [marking,setMarking]=useState(false);
+  const [markRect,setMarkRect]=useState<Rect|null>(null);
+  const [capsuleProposal,setCapsuleProposal]=useState(false);
   const capsule = win.form === 'capsule';
   const rect = capsule ? capsuleRectFor(win, kernel.getState().screen) : win.rect;
   const [peel, setPeel] = useState<{ corner: Pt; p: Pt; pinned: boolean } | null>(null);
@@ -96,6 +100,32 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   const shellRef=useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if(!marking)return;
+    const cancel=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.stopPropagation();setMarking(false);setMarkRect(null);}};
+    window.addEventListener('keydown',cancel,true);
+    return()=>window.removeEventListener('keydown',cancel,true);
+  },[marking]);
+  const startImportance=(event:RPE<HTMLDivElement>)=>{
+    if(event.button!==0||!contentRef.current)return;
+    event.preventDefault();event.stopPropagation();
+    const bounds=contentRef.current.getBoundingClientRect();
+    const point=(x:number,y:number)=>({x:Math.max(0,Math.min(bounds.width,x-bounds.left)),y:Math.max(0,Math.min(bounds.height,y-bounds.top))});
+    const start=point(event.clientX,event.clientY);
+    const move=(e:PointerEvent)=>{const end=point(e.clientX,e.clientY);setMarkRect({x:Math.min(start.x,end.x),y:Math.min(start.y,end.y),w:Math.abs(end.x-start.x),h:Math.abs(end.y-start.y)});};
+    const up=(e:PointerEvent)=>{
+      window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);
+      const end=point(e.clientX,e.clientY),x=Math.min(start.x,end.x),y=Math.min(start.y,end.y),w=Math.abs(end.x-start.x),h=Math.abs(end.y-start.y);
+      if(w>=24&&h>=24){
+        kernel.beginGesture('importance:mark');
+        kernel.setImportance(win.id,[...(kernel.get(win.id)?.importance??[]),{id:`marked:${Date.now()}`,x:x/bounds.width,y:y/bounds.height,w:w/bounds.width,h:h/bounds.height,weight:1,label:'重点区域'}]);
+        kernel.endGesture();
+        log({src:'technique',type:'cutout',windowId:win.id,data:{op:'mark'}});
+      }
+      setMarking(false);setMarkRect(null);
+    };
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
+  };
   useEffect(() => { setAgentExpanded(!!agentView?.revealed); }, [agentView?.planId, agentView?.revealed]);
   useEffect(() => { if (contentRef.current && typeof win.props.restoreScroll === 'number') { const pane = contentRef.current.querySelector<HTMLElement>('.writer-page,.finder-list,.pv') ?? contentRef.current; pane.scrollTop = win.props.restoreScroll; } }, [win.props.restoreToken, win.props.restoreScroll]);
   const revealed = !!agentView?.revealed && agentExpanded && Number(win.props.agentRevealExit??1)>.0001;
@@ -139,8 +169,23 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     const material=!capsule?beginWindowMotion(starts.map(s=>s.id),'move',{x:e.clientX,y:e.clientY},true):null;
     ui.set({ activeId: win.id });
     let snap: Rect | null = null;
+    let lastShakeX=sx,shakeDirection=0,shakeTurnX=sx,shakeTurns=0;
     const move = (ev: PointerEvent) => {
       if(material?.stopped)return;
+      if(members.length>1&&!capsule){
+        const step=ev.clientX-lastShakeX,dir=Math.sign(step);
+        if(Math.abs(step)>2&&dir){
+          if(!shakeDirection)shakeDirection=dir;
+          else if(dir!==shakeDirection&&Math.abs(lastShakeX-shakeTurnX)>40){shakeTurns++;shakeTurnX=lastShakeX;shakeDirection=dir;}
+        }
+        lastShakeX=ev.clientX;
+        if(shakeTurns>=2){
+          window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('blur',up);
+          previewCapsuleDrop([]);previewSurfaceFusion(null);material?.handoff();shakeApart(win.id,true);
+          ui.set({activeId:null,snapPreview:null});
+          return;
+        }
+      }
       const dx = ev.clientX - sx;
       const dy = ev.clientY - sy;
       if (capsule) {
@@ -150,7 +195,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
       }
       for (const s of starts) material?.update(s.id, { ...s.r, x: s.r.x + dx, y: Math.max(MENUBAR, s.r.y + dy) });
       previewCapsuleDrop(starts.map(s=>s.id),ev.clientX,ev.clientY);
-      if(members.length===1&&!capsuleDropUi.get().target)previewSurfaceFusion(win.id);else previewSurfaceFusion(null);
+      if(members.length===1&&!capsuleDropUi.get().target&&tech.fusion)previewSurfaceFusion(win.id,true);else previewSurfaceFusion(null);
       if (tech.snap && members.length === 1) {
         snap = snapTarget(ev.clientX, ev.clientY);
         ui.set({ snapPreview: snap });
@@ -214,7 +259,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
       if(material.stopped){previewCapsuleDrop([]);ui.set({activeId:null});return;}
       const current=kernel.get(win.id),drop=capsuleDropUi.get().target;previewCapsuleDrop([]);
       if(drop){material.handoff();kernel.setProps(win.id,{agentCollapsePreview:undefined});finishCapsuleDrop(resizeIds,drop,true);}
-      else if(current&&current.rect.w<160&&current.rect.h<110){material.handoff();kernel.setProps(win.id,{agentCollapsePreview:undefined});packWindows(resizeIds,true,resizeBase);}
+      else if(current&&current.rect.w<160&&current.rect.h<110){kernel.setProps(win.id,{agentCollapsePreview:undefined});material.finish();setCapsuleProposal(true);}
       else {kernel.setProps(win.id,{agentCollapsePreview:undefined});material.finish();}
       ui.set({ activeId: null });
     };
@@ -408,9 +453,19 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
       <SessionCapsule id={win.id} snapshot={sessionCapsule} mergedCount={queue.mergedCount} incoming={queue.incoming}/>
     </div>,document.body):null;
   const capsuleGhost=reentry?.source&&reentry.rect&&reentry.amount<.65?createPortal(<div className="agent-queue-receiver task-session" style={{position:'fixed',left:reentry.rect.x,top:reentry.rect.y,width:reentry.rect.w,height:reentry.rect.h,zIndex:visual.zIndex,opacity:1-motionEase(reentry.amount/.4),pointerEvents:'none'}} aria-hidden="true"><SessionCapsule id={win.id} snapshot={reentry.source}/></div>,document.body):null;
+  const proposedCapsuleRect=capsuleProposal?(()=>{
+    const size=capsuleSize(surfaceComponent(kernel.getState(),win.id).length),count=kernel.list().filter(item=>item.props.agentCapsule).length,area=workArea();
+    return {x:area.x+area.w-size.w-12,y:Math.min(area.y+area.h-size.h,area.y+16+count*126),...size};
+  })():null;
+  const proposal=capsuleProposal?createPortal(<div className="study-capsule-proposal" role="dialog" aria-label="胶囊布局预览" style={{left:Math.max(12,Math.min(innerWidth-270,rect.x+rect.w-240)),top:Math.max(MENUBAR+8,Math.min(innerHeight-156,rect.y+44))}}>
+    <div className="study-capsule-ghost"><AppIcon appId={win.appId} size={16}/><span>{win.title}</span></div>
+    <p>将这个窗口收为胶囊，保留返回入口。</p>
+    <div><button onClick={()=>setCapsuleProposal(false)}>取消</button><button className="confirm" onClick={()=>{setCapsuleProposal(false);cancelManualWindowMotion();packWindows(surfaceComponent(kernel.getState(),win.id));}}>确认收纳</button></div>
+  </div>,document.body):null;
+  const proposalTarget=proposedCapsuleRect?createPortal(<div className="study-capsule-target" style={{left:proposedCapsuleRect.x,top:proposedCapsuleRect.y,width:proposedCapsuleRect.w,height:proposedCapsuleRect.h}} aria-hidden="true"><AppIcon appId={win.appId} size={17}/><span>{win.title}</span></div>,document.body):null;
   return (
-    <>{menuAt&&<WindowMenu id={win.id} x={menuAt.x} y={menuAt.y} onClose={closeMenu}/>} {receiver}{capsuleGhost}<div className={cls} style={{ ...outerStyle, ['--agent-title-mix' as string]:titleMix, ['--agent-panel-w' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32)))}px`, ['--agent-reveal' as string]: revealProgress, ['--agent-peel-width' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32))) * revealProgress}px`, ['--agent-peel-height' as string]: `${win.rect.h * .45 * revealProgress}px` }} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive} onPointerDownCapture={onPointerDownCapture} onPointerDown={onAltCorner} onWheel={onWheel}>
-      {!!win.props.agentCollapsePreview&&<div className="collapse-hint">松开收为胶囊</div>}
+    <>{menuAt&&<WindowMenu id={win.id} x={menuAt.x} y={menuAt.y} onClose={closeMenu} onMarkImportance={()=>setMarking(true)} onPreviewCapsule={()=>setCapsuleProposal(true)}/>} {receiver}{capsuleGhost}{proposal}{proposalTarget}<div className={cls} style={{ ...outerStyle, ['--agent-title-mix' as string]:titleMix, ['--agent-panel-w' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32)))}px`, ['--agent-reveal' as string]: revealProgress, ['--agent-peel-width' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32))) * revealProgress}px`, ['--agent-peel-height' as string]: `${win.rect.h * .45 * revealProgress}px` }} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive} onPointerDownCapture={onPointerDownCapture} onPointerDown={onAltCorner} onWheel={onWheel}>
+      {!!win.props.agentCollapsePreview&&<div className="collapse-hint">松开预览胶囊布局</div>}
       {!!win.props.agentBond && <div className="agent-bond-skin" aria-hidden="true" />}
       <div className="aw-shell" ref={shellRef} style={shellStyle} data-fluid-skin={deformation?"true":undefined}>
         {(deformation||surfaceBonds(win).length>0)&&!revealed&&!visual.maskImage&&!visual.dented&&<div className="agent-fluid-material" aria-hidden="true"/>}
@@ -419,6 +474,8 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
           {titleBar}
           <div className="aw-content" style={deformation?{transform:deformation.contentTransform,willChange:'transform'}:undefined} ref={contentRef} onScrollCapture={(e) => readingProgress.set(win.id, (e.target as HTMLElement).scrollTop)}>
             <Content win={win} peripheral={false} />
+            {win.importance.filter(region=>region.id.startsWith('marked:')).map(region=><div key={region.id} className="study-important-outline" style={{left:`${region.x*100}%`,top:`${region.y*100}%`,width:`${region.w*100}%`,height:`${region.h*100}%`}} aria-hidden="true"/>)}
+            {marking&&<div className="study-mark-layer" onPointerDown={startImportance}><span>拖动框选需要保持可见的区域 · Esc 取消</span>{markRect&&<div className="study-mark-rect" style={{left:markRect.x,top:markRect.y,width:markRect.w,height:markRect.h}}/>}</div>}
           </div>
         </div>
         {agentView?.revealed && <RevealSurface id={win.id} view={agentView} width={rect.w} height={rect.h} progress={revealProgress} closure={win.props.agentRevealClosure as RevealClosure|undefined} body={bodyRef} baseClip={clip}/>}

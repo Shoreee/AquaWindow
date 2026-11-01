@@ -1,28 +1,31 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent } from 'react';
 import type { StudyAnswerExample } from '../study/tasks';
+import {kernel} from '../system/kernel';
 
 type Attachment = { name: string; url: string };
 type Message = { role: 'user' | 'assistant'; text: string; attachments: Attachment[]; sentences?: string[] };
+type SavedQa={messages:Message[];draft:string;pending:Attachment[]};
+const qaState=new Map<string,SavedQa>(),objectUrls=new Map<string,Set<string>>();
+kernel.onEvent(event=>{if(event.type==='reset'){for(const urls of objectUrls.values())for(const url of urls)URL.revokeObjectURL(url);objectUrls.clear();qaState.clear();}});
 
-export default function StudyQa({example}:{example?:StudyAnswerExample}){
-  const [messages,setMessages]=useState<Message[]>(()=>example?[
+export default function StudyQa({windowId,example}:{windowId:string;example?:StudyAnswerExample}){
+  const [messages,setMessages]=useState<Message[]>(()=>qaState.get(windowId)?.messages??(example?[
     {role:'user',text:example.question,attachments:[]},
     {role:'assistant',text:'',sentences:example.sentences,attachments:[]},
-  ]:[]);
-  const [draft,setDraft]=useState('');
-  const [pending,setPending]=useState<Attachment[]>([]);
+  ]:[]));
+  const [draft,setDraft]=useState(()=>qaState.get(windowId)?.draft??'');
+  const [pending,setPending]=useState<Attachment[]>(()=>qaState.get(windowId)?.pending??[]);
   const [dragging,setDragging]=useState(false);
   const input=useRef<HTMLInputElement>(null);
-  const urls=useRef<string[]>([]);
-
-  useEffect(()=>()=>{for(const url of urls.current)URL.revokeObjectURL(url);},[]);
+  useEffect(()=>{qaState.set(windowId,{messages,draft,pending});},[windowId,messages,draft,pending]);
 
   const attach=(files:FileList|File[])=>{
     const images=Array.from(files).filter(file=>file.type.startsWith('image/'));
     if(!images.length)return false;
     const next=images.map(file=>{
       const url=URL.createObjectURL(file);
-      urls.current.push(url);
+      if(!objectUrls.has(windowId))objectUrls.set(windowId,new Set());
+      objectUrls.get(windowId)!.add(url);
       return {name:file.name||'截图',url};
     });
     setPending(current=>[...current,...next]);

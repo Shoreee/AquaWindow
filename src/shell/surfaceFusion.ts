@@ -22,12 +22,12 @@ export function relatedScore(a:WindowState,b:WindowState){
  const tokens=new Set(x.match(/[a-z0-9]{4,}|[\u4e00-\u9fff]{2}/g)??[]),other=new Set(y.match(/[a-z0-9]{4,}|[\u4e00-\u9fff]{2}/g)??[]);
  const shared=[...tokens].filter(t=>other.has(t));return shared.length>=3?Math.min(.9,shared.length/Math.max(3,Math.min(tokens.size,other.size))):0;
 }
-export function relatedPartner(id:string,nearOnly=false){
+export function relatedPartner(id:string,nearOnly=false,manual=false){
  const state=kernel.getState(),a=state.windows[id];if(!a||!normal(a))return null;
  let best:{id:string;score:number}|null=null;
  for(const b of Object.values(state.windows)){
   if(b.id===id||!normal(b)||a.group&&a.group===b.group)continue;
-  const relevance=relatedScore(a,b);if(relevance<.55)continue;
+  const relevance=manual?1:relatedScore(a,b);if(relevance<.55)continue;
   const dx=Math.max(0,Math.max(a.rect.x-b.rect.x-b.rect.w,b.rect.x-a.rect.x-a.rect.w)),dy=Math.max(0,Math.max(a.rect.y-b.rect.y-b.rect.h,b.rect.y-a.rect.y-a.rect.h));
   const overlapX=Math.min(a.rect.x+a.rect.w,b.rect.x+b.rect.w)-Math.max(a.rect.x,b.rect.x),overlapY=Math.min(a.rect.y+a.rect.h,b.rect.y+b.rect.h)-Math.max(a.rect.y,b.rect.y);
   // Touching edges, not arbitrary overlap or distant window centres.
@@ -37,10 +37,28 @@ export function relatedPartner(id:string,nearOnly=false){
  }
  return best?.id??null;
 }
-export function previewSurfaceFusion(id:string|null){
- const b=id?relatedPartner(id,true):null,current=surfaceUi.get().candidate;
+export function previewSurfaceFusion(id:string|null,manual=false){
+ const b=id?relatedPartner(id,true,manual):null,current=surfaceUi.get().candidate;
  if(current?.a===id&&current?.b===b||!current&&!b)return;
  surfaceUi.set({candidate:id&&b?{a:id,b}:null});
+}
+/** A deliberate horizontal shake separates the whole manually fused window group. */
+export function shakeApart(id:string,continuingGesture=false){
+ const base=kernel.getState(),source=base.windows[id];
+ if(!source?.group){if(continuingGesture)kernel.endGesture();return false;}
+ const members=isSurfaceGroup(source.group)?surfaceComponent(base,id):Object.values(base.windows).filter(w=>w.group===source.group).map(w=>w.id);
+ if(members.length<2){if(continuingGesture)kernel.endGesture();return false;}
+ if(!continuingGesture)kernel.beginGesture('surface:shake');
+ const windows={...base.windows};
+ for(const memberId of members){
+  const w=windows[memberId];
+  windows[memberId]={...w,group:undefined,props:{...w.props,surfaceBonds:[],surfaceAnimating:undefined}};
+ }
+ kernel.previewState({...base,windows});
+ surfaceUi.set({candidate:null,split:null});
+ kernel.endGesture();
+ toast('窗口已分开，可独立移动',true);
+ return true;
 }
 function rollback(base:KernelState,raf:number,continuing=false){const changed=continuing||kernel.getState()!==base;cancelAnimationFrame(raf);stopCurrent=null;surfaceUi.set({split:null,candidate:null});kernel.endGesture();if(changed)kernel.undo('user');}
 export function fuseSurfaces(movingId:string,fixedId:string,continuingGesture=false){
