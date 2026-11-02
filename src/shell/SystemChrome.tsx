@@ -31,6 +31,17 @@ export function bootDesktop(studyMode:StudyInteractionModeId|null=ui.get().study
   });
 }
 
+function selectStudyMode(mode:StudyInteractionModeId){
+  if(ui.get().studyMode===mode)return;
+  if(ui.get().studyMode!==null){bootDesktop(mode);return;}
+  cancelSurfaceInteraction();
+  cancelCapsuleMotion();
+  cancelManualWindowMotion();
+  adaptation.cancel();
+  agent.stop();
+  ui.set({studyMode:mode,tech:studyTechniques(mode),agentEnabled:false,autonomy:'off'});
+}
+
 function SystemMenuBarImpl() {
   // Subscribe to menu semantics, not every animation rectangle.
   useKernelState(s=>JSON.stringify([s.focusedId,...s.order.map(id=>[id,s.windows[id].appId,s.windows[id].title])]));
@@ -208,11 +219,11 @@ function SystemMenuBarImpl() {
           )}
           {menu === 'study-mode' && <>
             <p className="study-mode-menu-intro">每次只启用一种交互形式。涡虫拖动始终保留。</p>
-            {studyInteractionModes.map(item=><button key={item.id} className={`study-mode-option${studyMode===item.id?' selected':''}`} aria-pressed={studyMode===item.id} onClick={action(()=>{if(studyMode!==item.id)bootDesktop(item.id);})}>
+            {studyInteractionModes.map(item=><button key={item.id} className={`study-mode-option${studyMode===item.id?' selected':''}`} aria-pressed={studyMode===item.id} onClick={action(()=>selectStudyMode(item.id))}>
               <span><strong>{item.label}</strong><small>{item.description}</small></span><i aria-hidden="true">{studyMode===item.id?'✓':''}</i>
             </button>)}
             {studyMode==='shake'&&<><div className="mb-sep"/><button onClick={action(prepareShake)}>准备已融合窗口</button></>}
-            <p className="study-mode-menu-foot">切换形式会重新开始当前任务，并清空已打开窗口。</p>
+            <p className="study-mode-menu-foot">首次选择会保留已打开的窗口；切换到另一种形式会重新开始当前任务。</p>
           </>}
         </div>
       )}

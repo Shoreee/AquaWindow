@@ -8,11 +8,11 @@ try{
   page.on('request',request=>{if(request.url().includes('/api/agent/'))agentCalls.push(request.url());});
   await page.goto(process.env.AW_URL??'http://127.0.0.1:5174/');
   await page.waitForFunction(()=>!!window.__aw);
-  const selectMode=async(label,id)=>{
+  const selectMode=async(label,id,expectReset=true)=>{
     await page.locator('.study-mode-trigger').click();
     await page.locator('.system-drop.study-mode .study-mode-option').filter({hasText:label}).click();
     await page.waitForFunction(mode=>window.__aw.ui.get().studyMode===mode,id);
-    assert.equal(await page.locator('[data-win]').count(),0,'Mode switching resets windows');
+    if(expectReset)assert.equal(await page.locator('[data-win]').count(),0,'Switching an active mode resets windows');
   };
   const openPair=()=>page.evaluate(()=>{
     const k=window.__aw.kernel;
@@ -24,7 +24,15 @@ try{
   assert.equal(await page.evaluate(()=>window.__aw.ui.get().studyMode),null);
   assert.equal(await page.locator('.study-mode-trigger').textContent(),'交互形式：请选择');
 
-  await selectMode('边界退让','yield');
+  const preselectionPdf=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'AutoUE.pdf',rect:{x:220,y:110,w:660,h:620},props:{resource:'pdf',taskId:'comparison'}}));
+  await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page[data-page="1"] canvas`)?.style.visibility==='visible',preselectionPdf);
+  await root(preselectionPdf).locator('.study-pdf-scroll').evaluate(element=>{element.scrollTop=480;});
+  await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-scroll`)?.scrollTop>400,preselectionPdf);
+  const savedPreselectionScroll=await root(preselectionPdf).locator('.study-pdf-scroll').evaluate(element=>element.scrollTop);
+  await selectMode('边界退让','yield',false);
+  assert.ok(await page.evaluate(id=>!!window.__aw.kernel.get(id),preselectionPdf),'First mode selection keeps the open PDF');
+  assert.ok(Math.abs((await root(preselectionPdf).locator('.study-pdf-scroll').evaluate(element=>element.scrollTop))-savedPreselectionScroll)<8,'First mode selection keeps reading position');
+  await page.evaluate(id=>window.__aw.kernel.close(id),preselectionPdf);
   let ids=await openPair();
   const dragTitle=await root(ids.a).locator('.aw-title').boundingBox();
   await page.mouse.move(dragTitle.x+180,dragTitle.y+20);await page.mouse.down();
