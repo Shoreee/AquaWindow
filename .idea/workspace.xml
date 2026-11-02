@@ -15,8 +15,14 @@
       <change beforePath="$PROJECT_DIR$/docs/research/paper-reading-experiment-environment.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/research/paper-reading-experiment-environment.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/study-interactions-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/study-interactions-e2e.mjs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/apps/StudyMaterials.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyMaterials.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/field/agentRenderer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/field/agentRenderer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/AgentScene.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/AgentScene.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/shell/Desktop.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/Desktop.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/shell/SystemChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/SystemChrome.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/Window.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/Window.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/surfaceFusion.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/surfaceFusion.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/ScreenshotCapture.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/ScreenshotCapture.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/TaskCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/TaskCard.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/study/interactionModes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/interactionModes.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/styles/agent.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/styles/agent.css" afterDir="false" />
     </list>
@@ -119,7 +125,8 @@
     <MESSAGE value="无法生成提交信息：本次代码变更内容为空，没有可供分析的代码差异。请提供具体的变更内容。" />
     <MESSAGE value="重构学习材料窗口：新增浏览器组件与胶囊缩略图，持久化 PDF 与问答状态。新增五种交互，但是混合在一起的版本" />
     <MESSAGE value="重构学习交互为五种独立模式：顶部菜单显式选择，切换时重置窗口并简化 PDF 为连续滚动渲染" />
-    <option name="LAST_COMMIT_MESSAGE" value="重构学习交互为五种独立模式：顶部菜单显式选择，切换时重置窗口并简化 PDF 为连续滚动渲染" />
+    <MESSAGE value="新增截图停靠交互模式：支持框选论文内容生成截图窗口并沿流体轨迹停靠，更新六种模式文档与 E2E 测试" />
+    <option name="LAST_COMMIT_MESSAGE" value="新增截图停靠交互模式：支持框选论文内容生成截图窗口并沿流体轨迹停靠，更新六种模式文档与 E2E 测试" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

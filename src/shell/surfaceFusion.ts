@@ -7,7 +7,7 @@ import {documentContent,documentSeed} from '../apps/content';
 import {ease} from '../agent/adaptive/choreography';
 import type {KernelState,WindowState} from '../kernel/types';
 import {fusionPlacement,isSurfaceGroup,seamGeometry,splitProgress,surfaceBonds,surfaceComponent,type SurfaceBond} from './surfaceBondGeometry';
-export const surfaceUi=createStore({candidate:null as {a:string;b:string}|null,split:null as {id:string;progress:number;fromEnd:boolean;dragging:boolean}|null});
+export const surfaceUi=createStore({candidate:null as {a:string;b:string}|null,split:null as {id:string;progress:number;fromEnd:boolean;dragging:boolean}|null,push:null as {x:number;y:number;axis:'x'|'y';progress:number}|null});
 let stopCurrent:(()=>void)|null=null;
 export const surfaceBusy=()=>!!stopCurrent;
 export function cancelSurfaceInteraction(){if(!stopCurrent)return false;stopCurrent();return true;}
@@ -49,18 +49,30 @@ export function shakeApart(id:string,continuingGesture=false){
  const members=isSurfaceGroup(source.group)?surfaceComponent(base,id):Object.values(base.windows).filter(w=>w.group===source.group).map(w=>w.id);
  if(members.length<2){if(continuingGesture)kernel.endGesture();return false;}
  if(!continuingGesture)kernel.beginGesture('surface:shake');
- const windows={...base.windows};
- for(const memberId of members){
-  const w=windows[memberId];
-  windows[memberId]={...w,group:undefined,props:{...w.props,surfaceBonds:[],surfaceAnimating:undefined}};
- }
- kernel.previewState({...base,windows});
- surfaceUi.set({candidate:null,split:null});
- kernel.endGesture();
- toast('窗口已分开，可独立移动',true);
+ const bond=surfaceBonds(source)[0],first=bond?base.windows[bond.a]:base.windows[members[0]],second=bond?base.windows[bond.b]:base.windows[members[1]];
+ const axis=bond?.axis??'x',seam=first&&second?seamGeometry(first.rect,second.rect,axis):null;
+ const center=seam?{x:axis==='x'?(seam.first+seam.second)/2:(seam.lo+seam.hi)/2,y:axis==='x'?(seam.lo+seam.hi)/2:(seam.first+seam.second)/2}:{x:source.rect.x+source.rect.w/2,y:source.rect.y+source.rect.h/2};
+ const started=performance.now(),duration=560;let raf=0;
+ surfaceUi.set({candidate:null,split:null,push:{...center,axis,progress:0}});
+ const draw=(now:number)=>{
+  const progress=Math.min(1,(now-started)/duration),amount=ease(progress),current=kernel.getState(),windows={...current.windows};
+  for(const [index,memberId] of members.entries()){
+   const original=base.windows[memberId],live=windows[memberId];if(!original||!live)continue;
+   const midpoint=axis==='x'?original.rect.x+original.rect.w/2:original.rect.y+original.rect.h/2;
+   const pivot=axis==='x'?center.x:center.y,side=midpoint<pivot?-1:midpoint>pivot?1:index===0?-1:1;
+   const shift=side*42*amount;
+   const rect={...original.rect,x:original.rect.x+(axis==='x'?shift:0),y:original.rect.y+(axis==='y'?shift:0)};
+   windows[memberId]={...live,rect,group:progress===1?undefined:original.group,props:{...live.props,surfaceBonds:progress===1?[]:surfaceBonds(original),surfaceAnimating:progress<1||undefined}};
+  }
+  kernel.previewState({...current,windows});
+  surfaceUi.set({push:progress<1?{...center,axis,progress}:null});
+  if(progress<1)raf=requestAnimationFrame(draw);else{stopCurrent=null;kernel.endGesture();toast('涡虫已推开窗口，可独立移动',true);}
+ };
+ stopCurrent=()=>rollback(base,raf,continuingGesture);
+ raf=requestAnimationFrame(draw);
  return true;
 }
-function rollback(base:KernelState,raf:number,continuing=false){const changed=continuing||kernel.getState()!==base;cancelAnimationFrame(raf);stopCurrent=null;surfaceUi.set({split:null,candidate:null});kernel.endGesture();if(changed)kernel.undo('user');}
+function rollback(base:KernelState,raf:number,continuing=false){const changed=continuing||kernel.getState()!==base;cancelAnimationFrame(raf);stopCurrent=null;surfaceUi.set({split:null,candidate:null,push:null});kernel.endGesture();if(changed)kernel.undo('user');}
 export function fuseSurfaces(movingId:string,fixedId:string,continuingGesture=false,setupOnly=false){
  if(!continuingGesture){cancelSurfaceInteraction();cancelManualWindowMotion();cancelCapsuleMotion();}
  const base=kernel.getState(),moving=base.windows[movingId],fixed=base.windows[fixedId];
@@ -119,7 +131,7 @@ export function beginSurfaceSplit(bond:SurfaceBond,event:PointerEvent){
 }
 // Undo restores bond metadata with the windows; transient tension never survives it.
 kernel.onEvent(e=>{
- if(['undo','reset','close'].includes(e.type))surfaceUi.set({split:null,candidate:null});
+ if(['undo','reset','close'].includes(e.type))surfaceUi.set({split:null,candidate:null,push:null});
  if(e.type==='close'){
   const state=kernel.getState(),windows={...state.windows};let changed=false;
   for(const [id,w] of Object.entries(windows)){const old=surfaceBonds(w),valid=old.filter(b=>windows[b.a]&&windows[b.b]);if(valid.length!==old.length){changed=true;windows[id]={...w,props:{...w.props,surfaceBonds:valid}};}}

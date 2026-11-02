@@ -8,11 +8,13 @@ try{
   page.on('request',request=>{if(request.url().includes('/api/agent/'))agentCalls.push(request.url());});
   await page.goto(process.env.AW_URL??'http://127.0.0.1:5174/');
   await page.waitForFunction(()=>!!window.__aw);
-  const selectMode=async(label,id,expectReset=true)=>{
+  const selectMode=async(label,id,clearForNextScenario=true)=>{
+    const openIds=await page.evaluate(()=>window.__aw.kernel.getState().order);
     await page.locator('.study-mode-trigger').click();
     await page.locator('.system-drop.study-mode .study-mode-option').filter({hasText:label}).click();
     await page.waitForFunction(mode=>window.__aw.ui.get().studyMode===mode,id);
-    if(expectReset)assert.equal(await page.locator('[data-win]').count(),0,'Switching an active mode resets windows');
+    assert.deepEqual(await page.evaluate(()=>window.__aw.kernel.getState().order),openIds,'Mode switching preserves open windows');
+    if(clearForNextScenario)await page.evaluate(()=>window.__aw.kernel.closeAll());
   };
   const openPair=()=>page.evaluate(()=>{
     const k=window.__aw.kernel;
@@ -23,6 +25,11 @@ try{
   const root=id=>page.locator(`[data-win="${id}"]`);
   assert.equal(await page.evaluate(()=>window.__aw.ui.get().studyMode),null);
   assert.equal(await page.locator('.study-mode-trigger').textContent(),'交互形式：请选择');
+  await page.locator('.study-mode-trigger').click();
+  assert.equal(await page.locator('.study-mode-option').count(),5);
+  assert.equal(await page.locator('.study-mode-option').filter({hasText:'抖动分裂'}).count(),0);
+  assert.ok((await page.locator('.study-mode-option').filter({hasText:'融合与拆分'}).textContent())?.includes('左右抖动'));
+  await page.locator('.study-mode-trigger').click();
 
   const preselectionPdf=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'AutoUE.pdf',rect:{x:220,y:110,w:660,h:620},props:{resource:'pdf',taskId:'comparison'}}));
   await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page[data-page="1"] canvas`)?.style.visibility==='visible',preselectionPdf);
@@ -32,6 +39,9 @@ try{
   await selectMode('边界退让','yield',false);
   assert.ok(await page.evaluate(id=>!!window.__aw.kernel.get(id),preselectionPdf),'First mode selection keeps the open PDF');
   assert.ok(Math.abs((await root(preselectionPdf).locator('.study-pdf-scroll').evaluate(element=>element.scrollTop))-savedPreselectionScroll)<8,'First mode selection keeps reading position');
+  await selectMode('重要区域透出','reveal',false);
+  assert.ok(Math.abs((await root(preselectionPdf).locator('.study-pdf-scroll').evaluate(element=>element.scrollTop))-savedPreselectionScroll)<8,'Later mode switching keeps reading position');
+  await selectMode('边界退让','yield',false);
   await page.evaluate(id=>window.__aw.kernel.close(id),preselectionPdf);
   let ids=await openPair();
   const dragTitle=await root(ids.a).locator('.aw-title').boundingBox();
@@ -67,21 +77,25 @@ try{
   await page.waitForFunction(()=>!Object.values(window.__aw.kernel.getState().windows).some(w=>w.props.surfaceAnimating));
   const seam=await page.locator('.surface-seam-hit').first().boundingBox();
   assert.ok(seam,'Fusion has a draggable seam');
-  if(seam.height>seam.width){await page.mouse.move(seam.x+seam.width/2,seam.y+3);await page.mouse.down();await page.mouse.move(seam.x+seam.width/2,seam.y+seam.height+8,{steps:15});}
-  else{await page.mouse.move(seam.x+3,seam.y+seam.height/2);await page.mouse.down();await page.mouse.move(seam.x+seam.width+8,seam.y+seam.height/2,{steps:15});}
+  if(seam.height>seam.width){await page.mouse.move(seam.x+seam.width/2,seam.y+3);await page.mouse.down();await page.mouse.move(seam.x+seam.width/2,seam.y+seam.height*.55,{steps:8});}
+  else{await page.mouse.move(seam.x+3,seam.y+seam.height/2);await page.mouse.down();await page.mouse.move(seam.x+seam.width*.55,seam.y+seam.height/2,{steps:8});}
+  await page.waitForFunction(()=>document.querySelector('.agent-canvas')?.__energy?.extraCores?.filter(core=>core.phase>0).length===2);
+  assert.ok(await page.evaluate(()=>document.querySelector('.agent-canvas').__energy.extraCores.every(core=>core.opacity>0)),'Seam split uses the flowing cursor material');
+  if(seam.height>seam.width)await page.mouse.move(seam.x+seam.width/2,seam.y+seam.height+8,{steps:7});
+  else await page.mouse.move(seam.x+seam.width+8,seam.y+seam.height/2,{steps:7});
   await page.mouse.up();
   await page.waitForFunction(({a,b})=>!window.__aw.kernel.get(a)?.group&&!window.__aw.kernel.get(b)?.group,ids);
 
-  await selectMode('抖动分裂','shake');
-  ids=await openPair();
   await page.locator('.study-mode-trigger').click();
   await page.getByRole('button',{name:'准备已融合窗口'}).click();
   await page.waitForFunction(({a,b})=>{const s=window.__aw.kernel.getState();return s.windows[a].group?.startsWith('surface:')&&s.windows[a].group===s.windows[b].group;},ids);
   await page.waitForFunction(()=>!Object.values(window.__aw.kernel.getState().windows).some(w=>w.props.surfaceAnimating));
-  assert.equal(await page.locator('.surface-seam-hit').first().evaluate(element=>getComputedStyle(element).pointerEvents),'none');
+  assert.equal(await page.locator('.surface-seam-hit').first().evaluate(element=>getComputedStyle(element).pointerEvents),'all');
   const title=await root(ids.a).locator('.aw-title').boundingBox(),x=title.x+180,y=title.y+20;
   await page.mouse.move(x,y);await page.mouse.down();
   for(const delta of [65,-65,65,-65,65])await page.mouse.move(x+delta,y,{steps:5});
+  await page.waitForFunction(()=>document.querySelector('.agent-canvas')?.__energy?.extraCores?.filter(core=>core.phase>0).length===2);
+  assert.ok(await page.evaluate(()=>document.querySelector('.agent-canvas').__energy.extraCores.some(core=>core.phase>0&&core.opacity>0)),'Shake uses the flowing cursor material to push windows');
   await page.mouse.up();
   await page.waitForFunction(({a,b})=>!window.__aw.kernel.get(a)?.group&&!window.__aw.kernel.get(b)?.group,ids);
 
@@ -125,16 +139,29 @@ try{
   await selectMode('截图停靠','screenshot');
   const sourceId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'AutoUE.pdf',rect:{x:190,y:110,w:660,h:620},props:{resource:'pdf',taskId:'screenshot'}}));
   await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page[data-page="1"] canvas`)?.style.visibility==='visible',sourceId);
-  await page.getByRole('button',{name:'截图',exact:true}).click();
+  assert.equal(await page.getByRole('button',{name:'截图（Shift+S）'}).count(),1);
+  await page.keyboard.press('Shift+s');
   assert.equal(await page.locator('.study-screenshot-overlay').count(),1);
   const paper=await root(sourceId).locator('.study-pdf-page[data-page="1"] canvas').boundingBox();
   await page.mouse.move(paper.x+70,paper.y+90);await page.mouse.down();
   await page.mouse.move(paper.x+290,paper.y+270,{steps:10});await page.mouse.up();
   await page.waitForFunction(()=>window.__aw.kernel.list().some(win=>win.props.resource==='capture'));
   const captureId=await page.evaluate(()=>window.__aw.kernel.list().find(win=>win.props.resource==='capture')?.id);
-  await page.waitForFunction(id=>!window.__aw.kernel.get(id)?.props.agentMotion,captureId);
+  await page.waitForFunction(({sourceId,captureId})=>{const k=window.__aw.kernel,a=k.get(sourceId),b=k.get(captureId);return !!a?.group&&a.group===b?.group&&a.group.startsWith('surface:')&&!a.props.surfaceAnimating&&!b.props.surfaceAnimating;},{sourceId,captureId});
   assert.equal(await root(captureId).locator('.study-captured-image img').count(),1);
-  assert.ok(await page.evaluate(({sourceId,captureId})=>{const k=window.__aw.kernel;return k.get(captureId).rect.x>=k.get(sourceId).rect.x+k.get(sourceId).rect.w-1;},{sourceId,captureId}),'Screenshot docks beside source');
+  assert.ok(await page.evaluate(({sourceId,captureId})=>{const k=window.__aw.kernel,s=k.get(sourceId).rect,c=k.get(captureId).rect,screen=k.getState().screen;return c.x>=s.x+s.w+3&&Math.abs(c.x+c.w-(screen.w-8))<2&&Math.abs(c.y-36)<2&&Math.abs(c.h-(screen.h-28-78-16))<2;},{sourceId,captureId}),'Fused screenshot fills remaining desktop beside source');
+  assert.ok(await page.locator('.surface-seam-hit').count()>0,'Fused screenshot exposes a separable seam');
+  await selectMode('边界退让','yield',false);
+  await page.keyboard.press('Shift+s');
+  assert.equal(await page.locator('.study-screenshot-overlay').count(),1);
+  await page.mouse.move(paper.x+85,paper.y+110);await page.mouse.down();
+  await page.mouse.move(paper.x+270,paper.y+250,{steps:8});await page.mouse.up();
+  await page.waitForFunction(()=>document.querySelector('.study-screenshot-overlay')===null);
+  await page.getByRole('button',{name:'打开图库'}).click();
+  assert.equal(await page.getByRole('button',{name:'打开论文截图 2'}).count(),1);
+  assert.equal(await page.evaluate(()=>window.__aw.kernel.list().filter(win=>win.props.resource==='capture').length),1,'Other modes save without opening a screenshot window');
+  await page.getByRole('button',{name:'打开论文截图 2'}).click();
+  await page.waitForFunction(()=>window.__aw.kernel.list().filter(win=>win.props.resource==='capture').length===2);
   assert.deepEqual(errors,[]);assert.deepEqual(agentCalls,[]);
-  console.log('PASS: six isolated interaction modes, screenshot docking, worm cursor, window copying, PDF restoration and agent-off isolation.');
+  console.log('PASS: five modes, seam and shake splitting, screenshot docking, gallery-only capture, PDF restoration and agent-off isolation.');
 }finally{await browser.close();}

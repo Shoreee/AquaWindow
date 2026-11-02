@@ -5,6 +5,7 @@ import { studyTasks, studyTaskStore, type StudyTaskId } from '../study/tasks';
 import StudyPdf,{copyStudyPdfState} from './StudyPdf';
 import StudyQa,{copyStudyQaState} from './StudyQa';
 import StudyBrowser,{copyStudyBrowserState} from './StudyBrowser';
+import {galleryStore,openGalleryCapture} from '../study/gallery';
 
 const noteState=new Map<string,string>();
 kernel.onEvent(event=>{if(event.type==='reset')noteState.clear();});
@@ -18,7 +19,7 @@ export function copyStudyMaterialState(sourceId:string,copyId:string){
 
 export function openStudyResource(resource:string,title?:string){
   const taskId=studyTaskStore.get().current;
-  if(resource==='files'||resource==='notes'||resource==='qa'||resource==='browser'){
+  if(resource==='files'||resource==='notes'||resource==='qa'||resource==='browser'||resource==='gallery'){
     const existing=kernel.list().find(win=>win.appId==='study'&&win.props.resource===resource&&win.props.taskId===taskId);
     if(existing){kernel.focus(existing.id);return existing.id;}
   }
@@ -26,12 +27,20 @@ export function openStudyResource(resource:string,title?:string){
   const area=workArea(),offset=(kernel.list().length%4)*26;
   return kernel.open({
     appId:'study',
-    title:title??item?.title??'空白笔记',
+    title:title??item?.title??(resource==='gallery'?'图库':'空白笔记'),
     role:resource==='notes'||resource==='qa'?'primary':'reference',
     rect:{x:area.x+Math.max(16,(area.w-660)/2)+offset,y:area.y+28+offset,w:Math.min(660,area.w-44),h:Math.min(620,area.h-54)},
     props:{resource,taskId},
     focus:true,
   },'user');
+}
+
+function StudyGallery(){
+  const items=useStore(galleryStore,state=>state.items);
+  return <div className="study-gallery">
+    <h2>图库</h2>
+    {items.length===0?<p>还没有截图。打开论文后按 Shift+S 框选，截图会保存在这里。</p>:<div className="study-gallery-grid">{items.map(item=><button key={item.id} type="button" onClick={()=>openGalleryCapture(item.id)} aria-label={`打开${item.title}`}><img src={item.url} alt=""/><span>{item.title}</span></button>)}</div>}
+  </div>;
 }
 
 export default function StudyMaterials({win}:{win:WindowState}){
@@ -49,6 +58,7 @@ export default function StudyMaterials({win}:{win:WindowState}){
   if(resource==='notes')return <div className="study-notes" contentEditable suppressContentEditableWarning aria-label="实验笔记" ref={element=>{if(element&&!element.dataset.initialized){element.textContent=noteState.get(win.id)??'';element.dataset.initialized='true';}}} onInput={event=>noteState.set(win.id,event.currentTarget.textContent??'')}/>;
   if(resource==='qa')return <StudyQa windowId={win.id} example={studyTasks[taskId].qaExample}/>;
   if(resource==='browser')return <StudyBrowser windowId={win.id}/>;
+  if(resource==='gallery')return <StudyGallery/>;
   if(resource==='capture')return <div className="study-captured-image"><img src={String(win.props.imageUrl??'')} alt="论文截图"/></div>;
   const item=resources.find(entry=>entry.id===resource);
   if(!item)return null;

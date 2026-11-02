@@ -30,7 +30,7 @@ export function TaskCard(){
       <ol>
         {task.steps.map(step=><li key={step}>{step}</li>)}
       </ol>
-      <p className="study-task-foot">{studyMode?'你可以独立移动、缩放和切换窗口。完成后告知研究者。':'请先在顶部“交互形式”中选择本次要体验的方式。'}</p>
+      <p className="study-task-foot">{studyMode==='screenshot'?'按 Shift+S 框选论文；图片会自动停靠并与论文窗口融合，同时保存到图库。':studyMode==='fusion'?'拖动窗口可融合；沿接缝拖动或左右抖动标题栏可拆分。Shift+S 截图存入图库。':studyMode?'按 Shift+S 框选论文，截图存入 Dock 的“图库”，可手动打开查看。':'请先在顶部“交互形式”中选择本次要体验的方式；Shift+S 可截图并存入图库。'}</p>
     </div>}
   </aside>;
 }

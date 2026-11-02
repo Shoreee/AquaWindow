@@ -33,7 +33,6 @@ export function bootDesktop(studyMode:StudyInteractionModeId|null=ui.get().study
 
 function selectStudyMode(mode:StudyInteractionModeId){
   if(ui.get().studyMode===mode)return;
-  if(ui.get().studyMode!==null){bootDesktop(mode);return;}
   cancelSurfaceInteraction();
   cancelCapsuleMotion();
   cancelManualWindowMotion();
@@ -122,7 +121,7 @@ function SystemMenuBarImpl() {
       <button className="mb-item study-mode-trigger" aria-expanded={menu==='study-mode'} onClick={()=>setMenu(menu==='study-mode'?null:'study-mode')}>
         交互形式：{studyMode?studyInteractionModes.find(item=>item.id===studyMode)?.label:'请选择'}
       </button>
-      {studyMode==='screenshot'&&<button className="mb-item" onClick={()=>window.dispatchEvent(new Event('study:screenshot:start'))}>截图</button>}
+      <button className="mb-item" aria-label="截图（Shift+S）" onClick={()=>window.dispatchEvent(new Event('study:screenshot:start'))}>截图 <kbd>Shift+S</kbd></button>
       <div className="mb-spacer" />
       {agentOn && <span
         className={`agent-service ${status === "ready" || status === "local" ? "ready" : ""}`}
@@ -222,8 +221,8 @@ function SystemMenuBarImpl() {
             {studyInteractionModes.map(item=><button key={item.id} className={`study-mode-option${studyMode===item.id?' selected':''}`} aria-pressed={studyMode===item.id} onClick={action(()=>selectStudyMode(item.id))}>
               <span><strong>{item.label}</strong><small>{item.description}</small></span><i aria-hidden="true">{studyMode===item.id?'✓':''}</i>
             </button>)}
-            {studyMode==='shake'&&<><div className="mb-sep"/><button onClick={action(prepareShake)}>准备已融合窗口</button></>}
-            <p className="study-mode-menu-foot">首次选择会保留已打开的窗口；切换到另一种形式会重新开始当前任务。</p>
+            {studyMode==='fusion'&&<><div className="mb-sep"/><button onClick={action(prepareShake)}>准备已融合窗口</button></>}
+            <p className="study-mode-menu-foot">切换交互形式会保留已打开的窗口和阅读位置。</p>
           </>}
         </div>
       )}
@@ -232,14 +231,14 @@ function SystemMenuBarImpl() {
 }
 
 function SystemDockImpl() {
-  const apps=[{id:'finder',label:'文件',resource:'files'},{id:'browser',label:'浏览器',resource:'browser'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'}];
+  const apps=[{id:'finder',label:'文件',resource:'files'},{id:'browser',label:'浏览器',resource:'browser'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'},{id:'gallery',label:'图库',resource:'gallery'}];
   const running=useKernelState(s=>apps.reduce((bits,app,index)=>Object.values(s.windows).some(w=>w.appId==='study'&&w.props.resource===app.resource&&!w.minimized)?bits|(1<<index):bits,0));
   return (
     <div className="dock-wrap">
       <div className="dock system-dock">
-        {apps.map((app,index)=><button className="dock-i" key={app.id} aria-label={`打开${app.label}`} onClick={()=>openStudyResource(app.resource,app.resource==='notes'?'实验笔记':app.resource==='qa'?'AI 问答':app.resource==='browser'?'浏览器':'文件')}>
+        {apps.map((app,index)=><button className="dock-i" key={app.id} aria-label={`打开${app.label}`} onClick={()=>openStudyResource(app.resource,app.resource==='notes'?'实验笔记':app.resource==='qa'?'AI 问答':app.resource==='browser'?'浏览器':app.resource==='gallery'?'图库':'文件')}>
           <span className="dock-tip">{app.label}</span>
-          <span className="dock-img"><AppIcon appId={app.id} size={45}/></span>
+          <span className="dock-img">{app.id==='gallery'?<span className="dock-gallery-icon" aria-hidden="true">▧</span>:<AppIcon appId={app.id} size={45}/>}</span>
           {(running&(1<<index))!==0&&<span className="dock-dot"/>}
         </button>)}
         <span className="dock-sep" />

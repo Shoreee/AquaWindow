@@ -58,6 +58,7 @@ export interface EnergyScene {
   roots: [number, number, number];
   transport: number;
   core: boolean;
+  extraCores?: {x:number;y:number;opacity:number;phase:number}[];
   links: FlowLink[];
 }
 const vertex = `#version 300 es
@@ -557,7 +558,7 @@ void main(){
   float neck=(1.-smoothstep(0.,.16,longitudinal))*uSever;
   alpha*=1.-neck*.82*(1.-uLanding);
  }
- if(uMode!=0)alpha*=uOpacity;
+ alpha*=uOpacity;
  if(uSelection>.5 && uMode==1)alpha*=1.+uLanding*.38;
  if(uSelection>.5 && uMode==1){
   float behind=1.-smoothstep(-8.,8.,vPosition.z);
@@ -812,7 +813,7 @@ export function createAgentRenderer(canvas: HTMLCanvasElement) {
   };
   return {
     render(s: EnergyScene, time: number, quality: number) {
-      const cursorOnly=s.morph<.12&&s.links.length===0;
+      const cursorOnly=s.morph<.12&&s.links.length===0&&!s.extraCores?.length;
       const dpr = cursorOnly?Math.min(devicePixelRatio||1,1.5):Math.min(devicePixelRatio || 1, quality);
       const w = Math.round(innerWidth * dpr),
         h = Math.round(innerHeight * dpr);
@@ -836,6 +837,10 @@ export function createAgentRenderer(canvas: HTMLCanvasElement) {
         x1 = Math.max(x1, link.host[0] + link.host[2] + 150);
         y1 = Math.max(y1, link.host[1] + link.host[3] + 150);
       }
+      for(const core of s.extraCores??[]){
+        x0=Math.min(x0,core.x-95);y0=Math.min(y0,core.y-95);
+        x1=Math.max(x1,core.x+155);y1=Math.max(y1,core.y+145);
+      }
       const bounds = {
         x: Math.max(0, Math.floor(x0 * dpr)),
         y: Math.max(0, Math.floor((innerHeight - y1) * dpr)),
@@ -857,7 +862,7 @@ export function createAgentRenderer(canvas: HTMLCanvasElement) {
       gl.clearColor(0, 0, 0, 0);
       scissor(previous);
       gl.clear(gl.COLOR_BUFFER_BIT);
-      if (!s.core && !s.links.length) {
+      if (!s.core && !s.links.length && !s.extraCores?.length) {
         previous = { x: 0, y: 0, w: 0, h: 0 };
         return;
       }
@@ -963,24 +968,30 @@ export function createAgentRenderer(canvas: HTMLCanvasElement) {
           if(link.selection && link.crawl>0. && link.crawl<1.)drawSurface(5);
         }
       }
-      if (s.core) {
+      if (s.core || s.extraCores?.length) {
         gl.uniform1i(u.uMode, 0);
         gl.uniform1f(u.uReturning, 0);
         gl.uniform1f(u.uPhase, 0);
         gl.uniform1f(u.uFeedback, s.drain);
         gl.uniform1f(u.uSelection,0.);
         gl.uniform1f(u.uWithdraw,0.);
-        gl.uniform1f(u.uOpacity,1.);
         gl.uniform1f(u.uLanding,0.);
         // The 17:22 core had no enclosing bubble. Keep the restored folds unobstructed.
         // Ordered optical layers, each with its own folds and travelling reveal masks.
-        const layers = s.morph < 0.001 ? 1 : 3;
-        for (let layer = layers - 1; layer >= 0; layer--) {
-          gl.uniform1f(u.uLayer, layer);
-          gl.uniform1f(u.uLoss, s.depletion[layer]);
-          gl.uniform1f(u.uRoot, s.roots[layer]);
-          drawSurface(0);
-        }
+        const drawCore=(x:number,y:number,opacity:number,phase:number,morph:number)=>{
+          gl.uniform2f(u.uOrigin,x,y);
+          gl.uniform1f(u.uOpacity,opacity);
+          gl.uniform1f(u.uMorph,morph);
+          const layers=morph<.001?1:3;
+          for(let layer=layers-1;layer>=0;layer--){
+            gl.uniform1f(u.uLayer,layer);
+            gl.uniform1f(u.uLoss,s.depletion[layer]);
+            gl.uniform1f(u.uRoot,(s.roots[layer]+phase)%1);
+            drawSurface(0);
+          }
+        };
+        if(s.core)drawCore(s.x,s.y,1,0,s.morph);
+        for(const core of s.extraCores??[])if(core.opacity>.001)drawCore(core.x,core.y,core.opacity,core.phase,1);
       }
       gl.disable(gl.BLEND);
       gl.bindVertexArray(null);

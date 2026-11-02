@@ -142,7 +142,7 @@ export function Desktop() {
       {xray && <div className="xray-hint">X-ray — front layers are see-through · release Space</div>}
       {development ? <><ProposalLayer /><ScenarioPanel /><MenuBar /><ControlCenter /><Dock /></> : <><SystemMenuBar /><SystemDock /></>}
       {!development && <TaskCard />}
-      {!development && studyMode==='screenshot' && <ScreenshotCapture />}
+      {!development && <ScreenshotCapture />}
       <Toasts />
       <MissionControl />
       <Switcher />
