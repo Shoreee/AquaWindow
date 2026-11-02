@@ -1,5 +1,6 @@
 import { AGENT_FILES, FS } from "../../apps/data/fs";
 import { paperById } from "../../apps/data/papers";
+import {isStudyTaskId,studyCandidates,studyDocument as task1Document} from '../../apps/data/studies';
 import {
   documentContent,
   documentSeed,
@@ -24,9 +25,13 @@ export function makeContext(
   feedback: AgentContext["feedback"],
 ): AgentContext {
   const sources: Source[] = [];
+  const studyHost = Object.values(state.windows).find(w=>w.appId==='task1'&&!w.props.agentBranch&&isStudyTaskId(w.props.pool));
+  const studyTaskId=studyHost&&isStudyTaskId(studyHost.props.pool)?studyHost.props.pool:undefined;
+  const studyMode = studyHost ? String(studyHost.props.studyMode??'parallel') : undefined;
+  const studySeen = new Set<string>();
   const focused = state.windows[state.focusedId ?? ""];
   const chosen = selectedIds.map((id) => state.windows[id]).filter(Boolean);
-  const task = (
+  const task = studyHost ? 'papers' : (
     chosen.length
       ? chosen.every((w) => w.appId === "finder" || w.appId === "code")
       : focused?.appId === "finder" || focused?.appId === "code"
@@ -37,10 +42,17 @@ export function makeContext(
   const windows = state.order
     .map((id) => state.windows[id])
     .filter((w) => !w.minimized && !w.props.agentCapsule)
+    .filter(w=>!studyHost || (w.props.pool===studyTaskId && (!w.props.studyDocumentId || task1Document(String(w.props.studyDocumentId))?.candidate)))
     .slice(-8)
     .map((w) => {
       const local: Source[] = [];
-      if (w.appId === "preview") {
+      if (studyHost && w.props.studyDocumentId) {
+        const doc=task1Document(String(w.props.studyDocumentId));
+        if(doc?.candidate&&!studySeen.has(doc.id)){
+          studySeen.add(doc.id);
+          local.push({id:`study:${doc.id}`,windowId:w.id,title:doc.file,text:`${doc.title}\n${doc.abstract}`,kind:'paper',studyDocumentId:doc.id});
+        }
+      } else if (w.appId === "preview") {
         const p = paperById(String(w.props.paperId ?? ""));
         local.push({
           id: `${w.id}:abstract`,
@@ -72,6 +84,15 @@ export function makeContext(
           kind: "note",
         });
       } else if (w.appId === "finder") {
+        if(studyHost){
+          for(const doc of studyCandidates(studyTaskId!)){
+            if(studySeen.has(doc.id))continue;
+            const preview=Object.values(state.windows).find(other=>other.props.studyDocumentId===doc.id&&!other.minimized&&!other.props.agentBranch);
+            if(preview)continue;
+            studySeen.add(doc.id);
+            local.push({id:`study:${doc.id}`,windowId:w.id,title:doc.file,text:`${doc.title}\n${doc.abstract}`,kind:'paper',studyDocumentId:doc.id});
+          }
+        } else {
         const path = String(w.props.path ?? "Downloads");
         const query = String(w.props.query ?? "").toLowerCase();
         const files = [...FS, ...AGENT_FILES].filter(
@@ -80,10 +101,10 @@ export function makeContext(
         for (const f of files
           .filter(
             (f) =>
-              !query ||
+              f.agentEligible !== false && (!query ||
               `${f.name} ${f.paperId ? paperById(f.paperId).title : ""} ${f.provenance?.task ?? ""}`
                 .toLowerCase()
-                .includes(query),
+                .includes(query)),
           )
           .slice(0, 14)) {
           local.push({
@@ -93,6 +114,7 @@ export function makeContext(
             text: `${f.dir}/${f.name}\n${f.paperId ? paperById(f.paperId).title : f.kind}\n${f.provenance?.context ?? f.agent?.note ?? ""}\n任务：${f.provenance?.task ?? "待归类"}`,
             kind: "file",
           });
+        }
         }
       }
       for (const s of local) {
@@ -114,6 +136,7 @@ export function makeContext(
       };
     });
   const semanticKey = hash({
+    studyMode,
     task,
     windows: [...windows]
       .sort((a, b) => a.id.localeCompare(b.id))
@@ -128,6 +151,7 @@ export function makeContext(
       .map((e) => [e.type, e.windowId, e.data]),
   });
   return {
+    studyMode,
     version: 1,
     key: hash([semanticKey, [...selectedIds].sort()]),
     semanticKey,

@@ -12,6 +12,7 @@ import Sculpt from './Sculpt';
 import Terminal, { Code } from './Terminal';
 import Tutorial from './Tutorial';
 import Writer from './Writer';
+import Task1 from './Task1';
 
 export interface AppDef {
   id: string;
@@ -27,6 +28,7 @@ export interface AppDef {
 }
 
 export const APPS: Record<string, AppDef> = {
+  task1: {id:'task1',name:'实验任务',Component:Task1,size:{w:650,h:560},role:'primary'},
   guide: { id: 'guide', name: 'AquaWindow Guide', Component: Guide, size: { w: 760, h: 600 }, role: 'system', dock: true },
   finder: { id: 'finder', name: 'Finder', Component: Finder, size: { w: 760, h: 460 }, role: 'tool', dock: true, defaultProps: { path: 'Downloads' } },
   preview: { id: 'preview', name: 'Preview', Component: Preview, size: { w: 600, h: 720 }, role: 'reference', dock: true, defaultProps: { paperId: '2403.11872' }, peripheral: true },

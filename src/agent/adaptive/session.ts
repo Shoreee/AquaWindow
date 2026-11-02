@@ -41,6 +41,7 @@ export const sessionInitial = (): SessionState => ({
   operation: "",
 });
 export interface SessionHost {
+  beforePress?():void;
   kernel: WindowKernel;
   context(selected: string[]): AgentContext;
   plans(context: AgentContext): AgentPlan[] | null;
@@ -67,6 +68,7 @@ export class AdaptationSession {
     const s = this.store.get();
     if (s.phase === "frozen") return this.confirm();
     if (this.active) return;
+    this.host.beforePress?.();
     this.base = this.host.kernel.getState();
     const selectedIds: string[] = [];
     this.ctx = this.host.context(selectedIds);
@@ -134,7 +136,8 @@ export class AdaptationSession {
       this.ctx
     ) {
       if (!s.selectedIds.length) {
-        const selectedIds = this.base!.order.filter(id => {const w=this.base!.windows[id];return w.form==='normal'&&!w.minimized;});
+        const studyHost=this.ctx.studyMode!==undefined?this.ctx.windows.find(w=>w.app==='task1'):undefined;
+        const selectedIds = studyHost?[studyHost.id]:this.base!.order.filter(id => {const w=this.base!.windows[id];return w.form==='normal'&&!w.minimized;});
         this.ctx=this.host.context(selectedIds);
         this.store.set({selectedIds});
         this.host.request(this.ctx);

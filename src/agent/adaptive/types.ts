@@ -11,6 +11,7 @@ export type Primitive =
   | "merge"
   | "permeate";
 export interface Source {
+  studyDocumentId?: string;
   id: string;
   windowId: string;
   title: string;
@@ -30,6 +31,7 @@ export interface ContextWindow {
   scroll: number;
 }
 export interface AgentContext {
+  studyMode?: string;
   version: 1;
   key: string;
   semanticKey: string;
@@ -67,6 +69,7 @@ export type PrimitiveStep =
   | (TargetStep & { type: "merge"; artifactIds: string[]; resultId: string })
   | (TargetStep & { type: "permeate"; depth: number; artifactIds: string[] });
 export interface Artifact {
+  studyDocumentId?: string;
   id: string;
   kind: "evidence" | "comparison" | "files" | "summary";
   title: string;

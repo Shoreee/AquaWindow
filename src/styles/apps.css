@@ -1515,3 +1515,48 @@
   color: var(--ink-2);
   font-size: 12.5px;
 }
+.pv-page.task1-paper { box-sizing:border-box; padding:32px 7%; overflow:auto; font-size:14px; }
+.task1-paper .pv-head { position:static; height:auto; margin-bottom:28px; }
+.task1-paper .pv-head h1 { font-size:23px; line-height:1.5; margin:0; }
+.task1-paper p { line-height: 1.9; margin: 12px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.task1-paper h2 { font-size: 16px; line-height: 1.6; margin: 22px 0 10px; }
+.task1-paper-actions { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:20px 0; }
+.task1-guide { overflow:auto; }
+.task1-guide p { line-height:1.8; margin:16px 0; }
+.task1-guide h1 { font-size:24px; margin-bottom:24px; }
+.task1-guide h2 { font-size:19px; margin-top:24px; }
+.task1-guide select { font:inherit; padding:6px 10px; border:1px solid #ccd4de; border-radius:6px; }
+
+/* Study documents live in the original fluid windows; no second window skin. */
+.production-desktop .writer-page.task1-layout-guide { padding:12px 26px; max-width:none; margin:0; }
+.task1-layout-guide p { font-size:14px; line-height:1.65; margin:4px 0 9px; }
+.task1-layout-guide p + p { font-size:12px; color:var(--ink-2); }
+.task1-native-document { position:relative; overflow:hidden; }
+.task1-native-page { width:100%; height:100%; transform-origin:top left; }
+.task1-native-compact .task1-native-page { width:200%; height:200%; transform:scale(.5); pointer-events:none; }
+.task1-native-promote { position:absolute; inset:0; width:100%; height:100%; padding:0; background:transparent; cursor:pointer; }
+.task1-native-promote > .chip { position:absolute; bottom:12px; right:18px; }
+.task1-native-promote:focus-visible { outline:2px solid var(--accent); outline-offset:-5px; border-radius:24px; }
+.study-image-tools { position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:7px; width:max-content; max-width:100%; padding:5px 0 9px; background:#fff; font:12px var(--font); }
+.study-document-image { display:block; max-width:none; height:auto; }
+.task1-native-compact .study-image-tools { display:none; }
+.task1-native-compact .study-document-image { width:100% !important; }
+.study-title-compact > .task1-native-page { visibility:hidden; }
+.study-title-preview { position:absolute; inset:20px; overflow:hidden; padding:20px 28px 34px; background:#fff; border:1px solid #e2e7f0; box-shadow:0 3px 18px #4d61830c; font-family:Georgia,'Songti SC',serif; }
+.production-desktop .pv .study-title-preview h1 { position:static; font-size:23px; line-height:1.45; letter-spacing:0; text-align:center; margin:0 0 15px; overflow-wrap:anywhere; }
+.study-title-preview p { font-size:10px; line-height:1.65; color:var(--ink-3); margin:0; }
+.pv-page.task1-paper.study-fit-image { display:flex; flex-direction:column; padding:10px 14px; overflow:hidden; }
+.study-fit-image .study-image-tools { position:static; flex:none; flex-wrap:wrap; width:auto; padding:0 0 8px; }
+.study-fit-image .study-image-viewport { flex:1; min-height:0; overflow:auto; }
+.study-fit-image .study-image-fit-page { overflow:hidden; }
+.study-fit-image .study-image-fit-page .study-document-image { height:100%; object-fit:contain; object-position:center; }
+.study-fit-image .task1-paper-actions { flex:none; padding:10px 0 0; }
+.production-desktop .pv.study-invoice-document { padding:12px; }
+.study-invoice-document.task1-native-compact .task1-native-page { width:100%; height:100%; transform:none; }
+.study-invoice-document.task1-native-compact .task1-paper-actions { display:none; }
+.study-invoice-document.task1-native-compact .study-image-viewport { overflow:hidden; }
+.study-invoice-document.task1-native-compact .study-document-image { height:100% !important; object-fit:contain; object-position:center; }
+@media(max-width:1100px) {
+  .study-title-preview { inset:12px; padding:12px 16px 28px; }
+  .production-desktop .pv .study-title-preview h1 { font-size:20px; line-height:1.4; }
+}

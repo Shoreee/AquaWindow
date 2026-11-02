@@ -7,6 +7,8 @@ export interface BusEvent {
   t: number;
   type:
     | 'window.focus'
+    | 'adaptation.invoke'
+    | 'adaptation.accept'
     | 'paper.read'
     | 'note.edit'
     | 'meeting.mention'

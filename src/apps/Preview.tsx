@@ -1,5 +1,28 @@
 import type { WindowState } from '../kernel/types';
 import { paperById, type Paper } from './data/papers';
+import { studyDocument as task1Document } from './data/studies';
+import Task1Paper from './Task1Paper';
+import {useLayoutEffect,useRef} from 'react';
+import type {StudyDocument} from './data/task1';
+import {promoteTask1Document} from '../study/task1';
+
+function StudyPreview({win,doc}:{win:WindowState;doc:StudyDocument}){
+  const compact=!!win.props.studyCompact;
+  const titlePreview=compact&&!doc.imageUrl;
+  const fitImage=!!win.props.studyFitImage;
+  const surface=useRef<HTMLDivElement>(null),scrollPosition=useRef(0);
+  useLayoutEffect(()=>{
+    const paper=surface.current?.querySelector<HTMLElement>('.task1-paper');
+    if(paper)paper.scrollTop=compact?0:scrollPosition.current;
+  },[compact]);
+  return <div ref={surface} className={`pv task1-native-document ${compact?'task1-native-compact':''} ${titlePreview?'study-title-compact':''} ${fitImage?'study-invoice-document':''}`}
+    onScrollCapture={e=>{if(!compact)scrollPosition.current=(e.target as HTMLElement).scrollTop;}}>
+    <div className="task1-native-page" aria-hidden={compact||undefined} inert={compact||undefined}><Task1Paper doc={doc} fitImage={fitImage}/></div>
+    {titlePreview&&<div className="study-title-preview" aria-hidden="true"><h1>{doc.title}</h1><p>{doc.abstract}</p></div>}
+    {compact&&<button data-agent-result className="task1-native-promote" aria-label={`放大阅读 ${doc.file}`}
+      onClick={e=>promoteTask1Document(doc.id,{x:e.clientX,y:e.clientY})}><span className="chip">点击放大 ↗</span></button>}
+  </div>;
+}
 
 function Figure({ kind }: { kind: Paper['figure'] }) {
   switch (kind) {
@@ -68,6 +91,11 @@ function Figure({ kind }: { kind: Paper['figure'] }) {
 }
 
 export default function Preview({ win, peripheral }: { win: WindowState; peripheral?: boolean }) {
+  const stimulus = task1Document(String(win.props.studyDocumentId ?? ''));
+  if(stimulus) {
+    if(peripheral) return <div className="pv-peri"><b>{stimulus.title}</b><p>{stimulus.abstract}</p></div>;
+    return <StudyPreview win={win} doc={stimulus}/>;
+  }
   const p = paperById(String(win.props.paperId ?? ''));
   if (peripheral)
     return (

@@ -3,6 +3,7 @@ import { memo, useState } from "react";
 import type { AgentView } from "../agent/adaptive/types";
 
 import { kernel } from "../system/kernel";
+import {openTask1Document} from '../study/task1';
 
 function AgentAttachmentImpl({
   view,
@@ -62,6 +63,7 @@ function AgentAttachmentImpl({
               >
                 <h4>{a.title}</h4>
                 <p>{a.body}</p>
+                {a.studyDocumentId&&<button className="chip" onClick={()=>openTask1Document(a.studyDocumentId!)}>打开文件</button>}
                 <div className="agent-sources">
                   {a.sourceIds.map((id, i) => (
                     <button

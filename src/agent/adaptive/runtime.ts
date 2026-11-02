@@ -12,6 +12,8 @@ import { CandidateBuffer, type ServiceStatus } from "./buffer";
 import { makeContext } from "./context";
 import { AdaptationSession } from "./session";
 import type { AgentContext } from "./types";
+import { isTask1Layout } from '../../study/task1Modes';
+import {isStudyTaskId} from '../../apps/data/studies';
 
 export const pointer = {
   x: typeof window === "undefined" ? 0 : window.innerWidth / 2,
@@ -32,11 +34,13 @@ planBuffer.onChange = () => serviceStore.set({ status: planBuffer.status, remote
 const context = (selected: string[]) =>
   makeContext(kernel.getState(), workArea(), selected, bus.recent, feedback);
 export const adaptation = new AdaptationSession({
+  beforePress:()=>bus.emit({type:'adaptation.invoke'}),
   kernel,
   context,
   plans: (ctx) => planBuffer.get(ctx),
   request: (ctx) => planBuffer.request(ctx, true),
   feedback: (plan, accepted) => {
+    if(accepted)bus.emit({type:'adaptation.accept',data:{planId:plan.id}});
     const list = accepted ? feedback.accepted : feedback.rejected;
     list.push(plan.title);
     if (list.length > 5) list.shift();
@@ -105,6 +109,7 @@ export function startAdaptiveRuntime() {
       'input,textarea,select,[contenteditable="true"],[role="textbox"]',
     );
   const down = (e: KeyboardEvent) => {
+    if(isStudyTaskId(ui.get().scenarioId)&&isTask1Layout(ui.get().strategyId??''))return;
     if(e.key==='Escape'&&document.querySelector('.window-context-menu'))return;
     if((e.key==='Escape'||(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')&&cancelSurfaceInteraction()){e.preventDefault();e.stopImmediatePropagation();return;}
     if(e.key==='Escape'&&manualWindowMotionActive()){cancelManualWindowMotion();previewCapsuleDrop([]);if(kernel.canUndo())kernel.undo('user');e.preventDefault();e.stopImmediatePropagation();return;}
