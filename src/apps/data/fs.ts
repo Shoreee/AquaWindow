@@ -9,6 +9,9 @@ export interface FsEntry {
   /** Minutes ago — for sorting. */
   age: number;
   paperId?: string;
+  studyDocumentId?: string;
+  /** Explicit inclusion flag for study candidate pools. */
+  agentEligible?: boolean;
   provenance?: {
     source: string;
     context: string;

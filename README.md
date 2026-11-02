@@ -115,6 +115,14 @@ pnpm start
 
 Open `http://127.0.0.1:8787`. GitHub Pages serves the browser build directly.
 
+## Three-task interaction study
+
+The study adds article, invoice, and social-practice document search tasks. After `pnpm dev`, open `http://127.0.0.1:5173/?study=task1`, `?study=task2`, or `?study=task3`, or use the task buttons in the top menu.
+
+Each task offers four fixed conditions: side-by-side, primary/secondary, central reveal, and permeate. They reuse AquaWindow's fluid windows and motion. Trials record the selected file, correctness, completion time, and condition in the current browser, with per-task and combined exports. Questionnaires are not included.
+
+See the [Chinese study guide](docs/research/three-tasks.zh-CN.md) for materials, controls, export details, and current experimental-design limitations. The original demo remains available without a `study` query parameter.
+
 ## Optional DeepSeek integration
 
 DeepSeek is **off by default**. Open **AquaWindow** in the top-left menu, enter an API key, save it, and explicitly enable the provider. Saving a key alone does not start requests.

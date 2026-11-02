@@ -12,6 +12,8 @@ import { kernel, ui, undo, useKernelState, workArea } from "./hooks";
 import { openApp } from "./Chrome";
 import { BASELINE } from "../techniques/techniques";
 import { bounded } from "../agent/adaptive/compiler";
+import { bootStudy } from '../study/task1';
+import {STUDY_TASKS} from '../apps/data/studies';
 
 export function bootDesktop() {
   cancelSurfaceInteraction();
@@ -132,6 +134,7 @@ function SystemMenuBarImpl() {
         编辑
       </button>
       <div className="mb-spacer" />
+      {STUDY_TASKS.map(task=><button key={task.id} className="mb-item" onClick={()=>bootStudy(task.id)}>{task.label}</button>)}
       <span
         className={`agent-service ${status === "ready" || status === "local" ? "ready" : ""}`}
         title={statusMessages[status]}

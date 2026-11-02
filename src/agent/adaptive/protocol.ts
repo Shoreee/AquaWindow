@@ -111,7 +111,7 @@ export function validatePlans(value: unknown, ctx: AgentContext): AgentPlan[] {
           valid =
             Array.isArray(s.branches) &&
             s.branches.length >= 2 &&
-            s.branches.length <= 3 &&
+            s.branches.length <= (ctx.studyMode!==undefined?4:3) &&
             new Set(s.branches.map((b) => (record(b) ? b.id : null))).size ===
               s.branches.length &&
             s.branches.every(

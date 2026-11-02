@@ -6,6 +6,7 @@ import { AGENT_FILES, FOLDERS, FS, type FsEntry } from './data/fs';
 import { paperById } from './data/papers';
 import { appState } from './state';
 import { openNear } from './open';
+import {isStudyTaskId,studyFileEntries} from './data/studies';
 
 const KIND_ICON: Record<FsEntry['kind'], string> = {
   pdf: '📄',
@@ -25,6 +26,9 @@ function haystack(e: FsEntry) {
 
 export default function Finder({ win }: { win: WindowState }) {
   const tech = useStore(ui, (s) => s.tech);
+  const poolId=isStudyTaskId(win.props.pool)?win.props.pool:undefined;
+  const studyPool = !!poolId;
+  const folders = studyPool ? ['Desktop', 'Downloads'] : FOLDERS;
   const created = useStore(appState, (s) => s.agentFilesCreated);
   const quarantined = useStore(appState, (s) => s.quarantined);
   const kept = useStore(appState, (s) => s.kept);
@@ -37,9 +41,9 @@ export default function Finder({ win }: { win: WindowState }) {
   const groupByTask = manualGroup || !!win.props.agentGrouping;
   const searchTimer = useRef<number | null>(null);
 
-  const agentMade = AGENT_FILES.slice(0, created);
+  const agentMade = studyPool ? [] : AGENT_FILES.slice(0, created);
   const entries = useMemo(() => {
-    const all = [...FS, ...agentMade].filter((e) => !quarantined.includes(e.name));
+    const all: FsEntry[] = poolId ? studyFileEntries(poolId) : [...FS, ...agentMade].filter((e) => !quarantined.includes(e.name));
     if (footprint) return agentMade;
     if (path === 'Recents') return [...all].filter((e) => e.kind !== 'folder').sort((a, b) => a.age - b.age).slice(0, 14);
     if (q) return all.filter((e) => e.dir === path || e.dir.startsWith(path + '/'));
@@ -54,10 +58,10 @@ export default function Finder({ win }: { win: WindowState }) {
       .filter((n) => !inDir.some((e) => e.kind === 'folder' && e.name === n))
       .map((n) => ({ name: n, dir: path, kind: 'folder', size: '—', modified: 'Today', age: 0 }));
     return [...inDir, ...implicit].sort((a, b) => (a.kind === 'folder' ? 0 : 1) - (b.kind === 'folder' ? 0 : 1));
-  }, [path, footprint, agentMade, quarantined, q]);
+  }, [path, footprint, agentMade, quarantined, q, poolId]);
 
   const nameMatch = (e: FsEntry) => e.name.toLowerCase().includes(q.toLowerCase());
-  const semMatch = (e: FsEntry) => haystack(e).includes(q.toLowerCase());
+  const semMatch = (e: FsEntry) => !studyPool && haystack(e).includes(q.toLowerCase());
   const shown = q ? entries.filter((e) => nameMatch(e) || (tech.semanticFiles && semMatch(e))) : entries;
 
   useEffect(() => {
@@ -77,13 +81,15 @@ export default function Finder({ win }: { win: WindowState }) {
   }, [q, path]);
 
   const openEntry = (e: FsEntry) => {
-    bus.emit({ type: 'files.open', windowId: win.id, data: { name: e.name, paperId: e.paperId } });
+    bus.emit({ type: 'files.open', windowId: win.id, data: { name: e.name, paperId: e.paperId, studyDocumentId: e.studyDocumentId } });
     if (e.kind === 'folder') {
       kernel.setProps(win.id, { path: `${e.dir}/${e.name}` });
       kernel.setTitle(win.id, e.name);
       return;
     }
-    if (e.kind === 'pdf' && e.paperId) {
+    if (e.studyDocumentId) {
+      openNear(win, { appId: 'preview', title: e.name, props: { studyDocumentId: e.studyDocumentId, pool:poolId }, role: 'reference', size: { w: 620, h: 700 } });
+    } else if (e.kind === 'pdf' && e.paperId) {
       openNear(win, { appId: 'preview', title: e.name, props: { paperId: e.paperId }, role: 'reference', size: { w: 620, h: 700 } });
     } else if (e.kind === 'code' || e.kind === 'log' || e.kind === 'doc') {
       openNear(win, { appId: 'code', title: e.name, props: { file: e.name, dir: e.dir }, role: 'reference', size: { w: 560, h: 440 } });
@@ -104,7 +110,7 @@ export default function Finder({ win }: { win: WindowState }) {
     <div className="finder">
       <aside className="finder-side">
         <div className="side-h">Favorites</div>
-        {FOLDERS.map((f) => (
+        {folders.map((f) => (
           <button
             key={f}
             className={`side-i ${!footprint && path === f ? 'on' : ''}`}
@@ -114,10 +120,10 @@ export default function Finder({ win }: { win: WindowState }) {
             }}
           >
             <span className="side-ic">{f === 'Downloads' ? '⬇︎' : f === 'Recents' ? '🕘' : f.startsWith('Projects') ? '🧪' : '📁'}</span>
-            {f.split('/').pop()}
+            {studyPool ? ({Desktop:'桌面',Downloads:'下载文件夹'}[f] ?? f.split('/').pop()) : f.split('/').pop()}
           </button>
         ))}
-        {tech.provenance && (
+        {tech.provenance && !studyPool && (
           <>
             <div className="side-h">Provenance</div>
             <button className={`side-i ${footprint ? 'on' : ''}`} onClick={() => kernel.setProps(win.id, { view: 'footprint' })}>
@@ -142,7 +148,7 @@ export default function Finder({ win }: { win: WindowState }) {
             ‹
           </button>
           <div className="finder-path">{footprint ? 'Agent footprint · claude-code session 17' : path}</div>
-          {tech.provenance && !footprint && (
+          {tech.provenance && !footprint && !studyPool && (
             <button className={`chip ${groupByTask ? 'on' : ''}`} onClick={() => setGroupByTask((g) => !g)}>
               按任务分组
             </button>
@@ -151,7 +157,7 @@ export default function Finder({ win }: { win: WindowState }) {
         </div>
         <div className="finder-head">
           <span>Name</span>
-          <span>{footprint ? 'Created by' : tech.provenance ? 'Came from' : 'Date Modified'}</span>
+          <span>{footprint ? 'Created by' : tech.provenance && !studyPool ? 'Came from' : 'Date Modified'}</span>
           <span>{footprint ? 'Action' : 'Size'}</span>
         </div>
         <div className="finder-list">
@@ -189,7 +195,7 @@ export default function Finder({ win }: { win: WindowState }) {
                         <>
                           log line {e.agent?.logLine} · <i>{e.agent?.note}</i>
                         </>
-                      ) : tech.provenance && (e.provenance || e.agent) ? (
+                      ) : tech.provenance && !studyPool && (e.provenance || e.agent) ? (
                         e.agent ? <i>{e.agent.note}</i> : <>{e.provenance?.context}</>
                       ) : (
                         e.modified

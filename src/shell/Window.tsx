@@ -30,6 +30,7 @@ import { FluidBoundary, fluidGeometry } from "./FluidBoundary";
 import { AgentAttachment, AgentAnchor, SessionCapsule } from './AgentAttachment';
 import type { AgentView, CapsuleSnapshot } from '../agent/adaptive/types';
 import { readingProgress } from '../apps/content';
+import {openTask1Document} from '../study/task1';
 
 type Pt = [number, number];
 
@@ -46,7 +47,7 @@ interface Props {
 
 const Content = memo(
   function Content({ win, peripheral }: { win: WindowState; peripheral: boolean }) {
-    const branch=win.props.agentBranch as {artifact:{title:string;body:string;sourceIds:string[]}}|undefined;
+    const branch=win.props.agentBranch as {artifact:{title:string;body:string;sourceIds:string[];studyDocumentId?:string}}|undefined;
     if(branch){
       const payload=win.props.agentBranch as {artifact:{title:string;body:string;sourceIds:string[]};parentSnapshot?:WindowState};
       const division=win.props.agentDivision as {born:boolean;amount:number}|undefined;
@@ -54,7 +55,7 @@ const Content = memo(
       const Origin=payload.parentSnapshot?APPS[payload.parentSnapshot.appId]?.Component:undefined;
       return <div className="agent-child-layers">
         {Origin&&payload.parentSnapshot&&<div className="agent-child-origin" style={{opacity:1-result,width:payload.parentSnapshot.rect.w,height:payload.parentSnapshot.rect.h}}><AppSurface win={payload.parentSnapshot} peripheral={false}/></div>}
-        <article className="agent-child-content" style={{opacity:result}}><small>独立分支 · {branch.artifact.sourceIds.length} 处来源</small><h2>{branch.artifact.title}</h2><p>{branch.artifact.body}</p></article>
+        <article className="agent-child-content" style={{opacity:result}}><small>独立分支 · {branch.artifact.sourceIds.length} 处来源</small><h2>{branch.artifact.title}</h2><p>{branch.artifact.body}</p>{branch.artifact.studyDocumentId&&<button data-agent-result className="chip" onClick={()=>openTask1Document(branch.artifact.studyDocumentId!,win.id)}>打开文件</button>}</article>
       </div>;
     }
     return <AppSurface win={win} peripheral={peripheral}/>;
