@@ -919,6 +919,7 @@
   flex-direction: column;
   gap: 6px;
   align-items: center;
+  pointer-events: none;
 }
 .toast {
   display: flex;
@@ -934,6 +935,7 @@
   max-width: 560px;
 }
 .toast button {
+  pointer-events: auto;
   font-weight: 700;
   color: #9fc1ff;
 }

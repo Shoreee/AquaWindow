@@ -6,11 +6,14 @@ import {fuseSurfaces} from '../shell/surfaceFusion';
 import {useStore} from '../system/createStore';
 import {studyTaskStore,type StudyTaskId} from './tasks';
 import {openGalleryCapture,saveGalleryCapture} from './gallery';
+import {openFileCapture,saveFileCapture} from './fileGallery';
+import {fileTaskStore} from './workspaces';
 
 type Point={x:number;y:number};
 const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,value));
 function sourceWindow(){
-  return [...kernel.list()].reverse().find(win=>win.appId==='study'&&!win.minimized&&win.form==='normal'&&!!document.querySelector(`[data-win="${CSS.escape(win.id)}"] .study-pdf-reader`));
+  const files=ui.get().studyEnvironment==='files';
+  return [...kernel.list()].reverse().find(win=>win.appId===(files?'file-study':'study')&&!win.minimized&&win.form==='normal'&&!!document.querySelector(`[data-win="${CSS.escape(win.id)}"] ${files?'.file-study-document':'.study-pdf-reader'}`));
 }
 function capture(rect:{x:number;y:number;w:number;h:number},sourceId:string){
   const root=document.querySelector<HTMLElement>(`[data-win="${CSS.escape(sourceId)}"]`);
@@ -28,10 +31,16 @@ function capture(rect:{x:number;y:number;w:number;h:number},sourceId:string){
     context.drawImage(canvas,(x-box.left)*scaleX,(y-box.top)*scaleY,(right-x)*scaleX,(bottom-y)*scaleY,x-rect.x,y-rect.y,right-x,bottom-y);
     covered=true;
   }
+  const image=root.querySelector<HTMLImageElement>('.file-study-image img');
+  if(image?.complete&&image.naturalWidth){
+    const box=image.getBoundingClientRect(),x=Math.max(rect.x,box.left),y=Math.max(rect.y,box.top),right=Math.min(rect.x+rect.w,box.right),bottom=Math.min(rect.y+rect.h,box.bottom);
+    if(right>x&&bottom>y){const scaleX=image.naturalWidth/box.width,scaleY=image.naturalHeight/box.height;context.drawImage(image,(x-box.left)*scaleX,(y-box.top)*scaleY,(right-x)*scaleX,(bottom-y)*scaleY,x-rect.x,y-rect.y,right-x,bottom-y);covered=true;}
+  }
   return covered?output:null;
 }
 export function ScreenshotCapture(){
   const mode=useStore(ui,state=>state.studyMode);
+  const environment=useStore(ui,state=>state.studyEnvironment);
   const [start,setStart]=useState<Point|null>(null),[end,setEnd]=useState<Point|null>(null),[sourceId,setSourceId]=useState<string|null>(null);
   useEffect(()=>{
     const activate=()=>{
@@ -51,7 +60,7 @@ export function ScreenshotCapture(){
     window.addEventListener('keydown',key,true);
     return()=>{window.removeEventListener('study:screenshot:start',activate);window.removeEventListener('keydown',key,true);};
   },[]);
-  useEffect(()=>{setSourceId(null);setStart(null);setEnd(null);},[mode]);
+  useEffect(()=>{setSourceId(null);setStart(null);setEnd(null);},[mode,environment]);
   if(!sourceId)return null;
   const area=start&&end?{x:Math.min(start.x,end.x),y:Math.min(start.y,end.y),w:Math.abs(start.x-end.x),h:Math.abs(start.y-end.y)}:null;
   const finish=(point:Point)=>{
@@ -64,7 +73,8 @@ export function ScreenshotCapture(){
     bitmap.toBlob(blob=>{
       if(!blob)return;
       const source=kernel.get(sourceId);if(!source)return;
-      const item=saveGalleryCapture(blob,(source.props.taskId as StudyTaskId|undefined)??studyTaskStore.get().current,sourceId);
+      const file=ui.get().studyEnvironment==='files';
+      const item=file?saveFileCapture(blob,fileTaskStore.get().current,sourceId):saveGalleryCapture(blob,(source.props.taskId as StudyTaskId|undefined)??studyTaskStore.get().current,sourceId);
       if(ui.get().studyMode!=='screenshot'){toast('截图已保存到图库，可从 Dock 打开查看');return;}
       const bounds=workArea(),w=Math.min(390,Math.max(240,selection.w+32)),h=Math.min(430,Math.max(180,selection.h*w/selection.w+64));
       const gap=4;
@@ -81,7 +91,7 @@ export function ScreenshotCapture(){
         ?{x:right,y:bounds.y,w:rightWidth,h:bounds.h}
         :{x:bounds.x,y:bounds.y,w:leftWidth,h:bounds.h};
       const initial={x:clamp(selection.x,bounds.x,bounds.x+bounds.w-w),y:clamp(selection.y,bounds.y,bounds.y+bounds.h-h),w,h};
-      const id=openGalleryCapture(item.id,initial);if(!id)return;
+      const id=file?openFileCapture(item.id,initial):openGalleryCapture(item.id,initial);if(!id)return;
       const motion=beginWindowMotion([id],'move',{x:selection.x+selection.w/2,y:selection.y+selection.h/2});
       motion.update(id,target);
       window.setTimeout(()=>{
@@ -96,7 +106,7 @@ export function ScreenshotCapture(){
     },'image/png');
   };
   return <div className="study-screenshot-overlay" onPointerDown={event=>{event.currentTarget.setPointerCapture(event.pointerId);setStart({x:event.clientX,y:event.clientY});setEnd({x:event.clientX,y:event.clientY});}} onPointerMove={event=>{if(start)setEnd({x:event.clientX,y:event.clientY});}} onPointerUp={event=>finish({x:event.clientX,y:event.clientY})}>
-    <div className="study-screenshot-hint">在论文页面拖动框选 · Esc 取消</div>
+    <div className="study-screenshot-hint">在{environment==='files'?'文件':'论文'}页面拖动框选 · Esc 取消</div>
     {area&&<div className="study-screenshot-selection" style={{left:area.x,top:area.y,width:area.w,height:area.h}}/>}
   </div>;
 }

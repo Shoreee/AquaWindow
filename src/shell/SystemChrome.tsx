@@ -12,6 +12,8 @@ import { agent, kernel, ui, undo, useKernelState, workArea } from "./hooks";
 import {toast} from '../system/ui';
 import {studyInteractionModes,studyTechniques,type StudyInteractionModeId} from '../study/interactionModes';
 import {openStudyResource} from '../apps/StudyMaterials';
+import {openApp} from './Chrome';
+import {fileTaskStore,openFileTask,switchStudyEnvironment,type StudyEnvironment} from '../study/workspaces';
 
 export function bootDesktop(studyMode:StudyInteractionModeId|null=ui.get().studyMode) {
   cancelSurfaceInteraction();
@@ -19,7 +21,8 @@ export function bootDesktop(studyMode:StudyInteractionModeId|null=ui.get().study
   cancelManualWindowMotion();
   adaptation.cancel();
   agent.stop();
-  kernel.closeAll();
+  if(ui.get().studyEnvironment==='files')kernel.restoreWorkspace({windows:{},order:[],focusedId:null,screen:kernel.getState().screen,rev:0});
+  else kernel.closeAll();
   ui.set({
     scenarioId: null,
     strategyId: null,
@@ -29,6 +32,7 @@ export function bootDesktop(studyMode:StudyInteractionModeId|null=ui.get().study
     studyMode,
     tech: studyTechniques(studyMode),
   });
+  if(ui.get().studyEnvironment==='files')openFileTask(fileTaskStore.get().current);
 }
 
 function selectStudyMode(mode:StudyInteractionModeId){
@@ -52,6 +56,8 @@ function SystemMenuBarImpl() {
   const phase = useStore(adaptation.store, (s) => s.phase);
   const agentOn = useStore(ui, (s) => s.agentEnabled);
   const studyMode = useStore(ui, (s) => s.studyMode);
+  const studyEnvironment=useStore(ui,s=>s.studyEnvironment);
+  const fileRunning=useStore(fileTaskStore,s=>s.running);
   const [menu, setMenu] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
   const ref = useRef<HTMLDivElement>(null);
@@ -94,6 +100,10 @@ function SystemMenuBarImpl() {
     if(a.group&&a.group===b.group){toast('这两个窗口已经融合，可以抓住标题栏左右抖动');return;}
     fuseSurfaces(a.id,b.id,false,true);
   };
+  const selectEnvironment=(next:StudyEnvironment)=>{
+    cancelSurfaceInteraction();cancelCapsuleMotion();cancelManualWindowMotion();adaptation.cancel();agent.stop();
+    switchStudyEnvironment(next);
+  };
   return (
     <div className="menubar system-menubar" ref={ref}>
       <button
@@ -118,7 +128,8 @@ function SystemMenuBarImpl() {
       >
         编辑
       </button>
-      <button className="mb-item study-mode-trigger" aria-expanded={menu==='study-mode'} onClick={()=>setMenu(menu==='study-mode'?null:'study-mode')}>
+      <button className="mb-item study-environment-trigger" aria-expanded={menu==='study-environment'} onClick={()=>setMenu(menu==='study-environment'?null:'study-environment')}>实验环境：{studyEnvironment==='paper'?'论文阅读':'文件管理'}</button>
+      <button className="mb-item study-mode-trigger" disabled={studyEnvironment==='files'&&fileRunning} aria-expanded={menu==='study-mode'} onClick={()=>setMenu(menu==='study-mode'?null:'study-mode')}>
         交互形式：{studyMode?studyInteractionModes.find(item=>item.id===studyMode)?.label:'请选择'}
       </button>
       <button className="mb-item" aria-label="截图（Shift+S）" onClick={()=>window.dispatchEvent(new Event('study:screenshot:start'))}>截图 <kbd>Shift+S</kbd></button>
@@ -224,6 +235,7 @@ function SystemMenuBarImpl() {
             {studyMode==='fusion'&&<><div className="mb-sep"/><button onClick={action(prepareShake)}>准备已融合窗口</button></>}
             <p className="study-mode-menu-foot">切换交互形式会保留已打开的窗口和阅读位置。</p>
           </>}
+          {menu==='study-environment'&&<><p className="study-mode-menu-intro">两个环境的窗口与任务分别保留。</p><button className="study-mode-option" aria-pressed={studyEnvironment==='paper'} onClick={action(()=>selectEnvironment('paper'))}><span><strong>论文阅读</strong><small>AutoUE 阅读与对照任务</small></span></button><button className="study-mode-option" aria-pressed={studyEnvironment==='files'} onClick={action(()=>selectEnvironment('files'))}><span><strong>文件管理</strong><small>找论文、找代码、整理遗留文件</small></span></button></>}
         </div>
       )}
     </div>
@@ -231,14 +243,15 @@ function SystemMenuBarImpl() {
 }
 
 function SystemDockImpl() {
-  const apps=[{id:'finder',label:'文件',resource:'files'},{id:'browser',label:'浏览器',resource:'browser'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'},{id:'gallery',label:'图库',resource:'gallery'}];
-  const running=useKernelState(s=>apps.reduce((bits,app,index)=>Object.values(s.windows).some(w=>w.appId==='study'&&w.props.resource===app.resource&&!w.minimized)?bits|(1<<index):bits,0));
+  const environment=useStore(ui,s=>s.studyEnvironment);
+  const apps=environment==='paper'?[{id:'finder',label:'文件',resource:'files'},{id:'browser',label:'浏览器',resource:'browser'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'},{id:'gallery',label:'图库',resource:'gallery'}]:[{id:'finder',label:'文件',resource:'finder'},{id:'file-study-gallery',label:'图库',resource:'file-study-gallery'}];
+  const running=useKernelState(s=>apps.reduce((bits,app,index)=>Object.values(s.windows).some(w=>environment==='paper'?w.appId==='study'&&w.props.resource===app.resource&&!w.minimized:w.appId===app.id&&!w.minimized)?bits|(1<<index):bits,0));
   return (
     <div className="dock-wrap">
       <div className="dock system-dock">
-        {apps.map((app,index)=><button className="dock-i" key={app.id} aria-label={`打开${app.label}`} onClick={()=>openStudyResource(app.resource,app.resource==='notes'?'实验笔记':app.resource==='qa'?'AI 问答':app.resource==='browser'?'浏览器':app.resource==='gallery'?'图库':'文件')}>
+        {apps.map((app,index)=><button className="dock-i" key={app.id} aria-label={`打开${app.label}`} onClick={()=>environment==='paper'?openStudyResource(app.resource,app.resource==='notes'?'实验笔记':app.resource==='qa'?'AI 问答':app.resource==='browser'?'浏览器':app.resource==='gallery'?'图库':'文件'):openApp(app.id)}>
           <span className="dock-tip">{app.label}</span>
-          <span className="dock-img">{app.id==='gallery'?<span className="dock-gallery-icon" aria-hidden="true">▧</span>:<AppIcon appId={app.id} size={45}/>}</span>
+          <span className="dock-img">{app.id==='gallery'||app.id==='file-study-gallery'?<span className="dock-gallery-icon" aria-hidden="true">▧</span>:<AppIcon appId={app.id} size={45}/>}</span>
           {(running&(1<<index))!==0&&<span className="dock-dot"/>}
         </button>)}
         <span className="dock-sep" />

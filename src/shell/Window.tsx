@@ -140,6 +140,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
 
   // ── focus / depth pull ────────────────────────────────────────────────────
   const onPointerDownCapture = (e: RPE) => {
+    if((e.target as HTMLElement).closest('.file-study-submit button'))return;
     if (e.button !== 0 || (e.target as HTMLElement).closest(".agent-anchor,[data-agent-result],[data-reveal-handle],[data-capsule-id]")) return;
     if (win.depth > 0.05 && !e.altKey) {
       if (win.group?.startsWith('trail')) rerankTrail(kernel, win.group, win.id, 'trail:pull');
