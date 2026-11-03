@@ -4,17 +4,20 @@ import {boundaryChange} from './boundaryMotion';
 import type {AgentMotion} from './choreography';
 import type {Rect} from '../../kernel/types';
 let cancelCurrent:(()=>void)|null=null;
+let cursorDrag=false;
 export function manualWindowMotionActive(){return !!cancelCurrent;}
+export function manualCursorDragActive(){return cursorDrag;}
 export function cancelManualWindowMotion(){if(!cancelCurrent)return false;cancelCurrent();return true;}
 /** Native gestures and agent plans write the same motion contract, without rerendering documents. */
 export function beginWindowMotion(ids:string[],intent:'move'|'resize',point?:{x:number;y:number},direct=false){
  cancelCurrent?.();
+ const morphCursor=intent==='move'&&direct;
  const starts=new Map(ids.map(id=>[id,{...kernel.get(id)!.rect}]));let started=performance.now();
  let raf=0,ending=0,releaseAt=0,stopped=false,activated=false,lastAt=started,activity=0,coverage=0;
  const origins=new Map<string,[number,number]>();
  if(point)for(const id of ids){const box=document.querySelector<HTMLElement>(`[data-win="${CSS.escape(id)}"]`)?.getBoundingClientRect();if(box)origins.set(id,[Math.max(0,Math.min(1,(point.x-box.x)/box.width)),Math.max(0,Math.min(1,(point.y-box.y)/box.height))]);}
  const previous=new Map<string,Rect>(starts),targets=new Map<string,Rect>(starts);
- const clear=()=>{if(stopped)return;stopped=true;cancelAnimationFrame(raf);
+ const clear=()=>{if(stopped)return;stopped=true;cursorDrag=false;cancelAnimationFrame(raf);
   if(activated)for(const id of ids){const w=kernel.get(id);if(w)kernel.setProps(id,{agentMotion:undefined});}
   if(activated)endMaterial();cancelCurrent=null;
  };
@@ -47,8 +50,8 @@ export function beginWindowMotion(ids:string[],intent:'move'|'resize',point?:{x:
  };
  cancelCurrent=()=>{clear();kernel.endGesture();};
  return {update(id:string,rect:Rect){if(stopped)return;targets.set(id,{...rect});if(direct)kernel.setRect(id,rect);
- if(!activated){const from=starts.get(id)!;if(Math.hypot(rect.x-from.x,rect.y-from.y,rect.w-from.w,rect.h-from.h)<1)return;activated=true;started=lastAt=performance.now();beginMaterial(ids);raf=requestAnimationFrame(draw);}
- },handoff(){clear();},get stopped(){return stopped;},finish(){if(!activated){clear();kernel.endGesture();}else if(!stopped&&!ending)ending=performance.now();},cancel(){clear();kernel.endGesture();}};
+ if(!activated){const from=starts.get(id)!;if(Math.hypot(rect.x-from.x,rect.y-from.y,rect.w-from.w,rect.h-from.h)<1)return;activated=true;if(morphCursor)cursorDrag=true;started=lastAt=performance.now();beginMaterial(ids);raf=requestAnimationFrame(draw);}
+ },handoff(){clear();},get stopped(){return stopped;},finish(){cursorDrag=false;if(!activated){clear();kernel.endGesture();}else if(!stopped&&!ending)ending=performance.now();},cancel(){clear();kernel.endGesture();}};
 }
 
 /** Maximise/restore uses the same carrier instead of jumping to its new rectangle. */

@@ -13,6 +13,8 @@ import { Window } from './Window';
 import { SystemDock, SystemMenuBar } from './SystemChrome';
 import { AgentScene } from './AgentScene';
 import { startAdaptiveRuntime } from '../agent/adaptive/runtime';
+import {TaskCard} from '../study/TaskCard';
+import {ScreenshotCapture} from '../study/ScreenshotCapture';
 
 const development = import.meta.env.DEV && new URLSearchParams(location.search).get('dev') === '1';
 
@@ -71,6 +73,7 @@ export function Desktop() {
   const [recursiveOrder, setRecursiveOrder] = useState<string[] | null>(null);
   const state = useKernelState((s) => s);
   const tech = useStore(ui, (s) => s.tech);
+  const studyMode = useStore(ui, (s) => s.studyMode);
   const activeId = useStore(ui, (s) => s.activeId);
   const xray = useStore(ui, (s) => s.xray);
   const snap = useStore(ui, (s) => s.snapPreview);
@@ -110,7 +113,7 @@ export function Desktop() {
   }, [order, state, visuals, tech.fusion, mention]);
 
   return (
-    <div className={`desktop production-desktop ${xray ? 'xray' : ''} ${tech.shape === 'squircle' ? 'fluid-mode' : ''}`}>
+    <div className={`desktop production-desktop ${xray ? 'xray' : ''} ${tech.shape === 'squircle' ? 'fluid-mode' : ''} ${!development&&studyMode?`study-mode-${studyMode}`:''}`}>
       <div className="wallpaper">
         <div className="blob b1" />
         <div className="blob b2" />
@@ -138,6 +141,8 @@ export function Desktop() {
       {snap && <div className="snap-preview" style={{ left: snap.x, top: snap.y, width: snap.w, height: snap.h }} />}
       {xray && <div className="xray-hint">X-ray — front layers are see-through · release Space</div>}
       {development ? <><ProposalLayer /><ScenarioPanel /><MenuBar /><ControlCenter /><Dock /></> : <><SystemMenuBar /><SystemDock /></>}
+      {!development && <TaskCard />}
+      {!development && <ScreenshotCapture />}
       <Toasts />
       <MissionControl />
       <Switcher />

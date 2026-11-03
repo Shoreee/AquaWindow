@@ -7,7 +7,7 @@ import type {Rect} from '../../kernel/types';
 import type {CapsuleSnapshot} from './types';
 import {kernel,workArea} from '../../system/kernel';
 import {readingProgress} from '../../apps/content';
-import {toast} from '../../system/ui';
+import {toast,ui} from '../../system/ui';
 import {ease,type AgentMotion} from './choreography';
 import {beginMaterial,endMaterial} from './material';
 
@@ -15,6 +15,12 @@ import {restoredCapsuleMember as restored} from './capsuleState';
 export {extractCapsuleState} from './capsuleState';
 export {capsuleSize,capsuleOverstretch} from './capsuleGeometry';
 export function capsuleRectInside(rect:Rect){const W=workArea(),w=Math.max(132,Math.min(W.w,rect.w)),h=Math.max(64,Math.min(W.h,rect.h));return {x:Math.max(W.x,Math.min(W.x+W.w-w,rect.x)),y:Math.max(W.y,Math.min(W.y+W.h-h,rect.y)),w,h};}
+export function manualCapsuleWorkArea(){
+ const area=workArea();
+ if(ui.get().studyMode!=='capsule')return area;
+ const y=Math.max(area.y,116);
+ return {...area,y,h:area.h-(y-area.y)};
+}
 const mixRect=(a:Rect,b:Rect,t:number):Rect=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,w:a.w+(b.w-a.w)*t,h:a.h+(b.h-a.h)*t});
 export function releaseMotion(from:Rect,to:Rect,amount:number,elapsed:number):AgentMotion{return {primitive:'permeate',edge:'left',transport:{active:false,coverage:0,progress:amount},docked:true,elapsed,travelDuration:.01,progress:amount,action:amount,arrival:1,contactAge:-1,seed:3,index:0,count:1,childCount:1,from,to,direction:[1,0]};}
 let animation=0,animating=false,manualCancel:(()=>void)|null=null;
@@ -33,11 +39,12 @@ export function restoreCapsule(id:string,continuingGesture=false){
  animating=true;
  const source=renderedCapsuleRect(id)??host.capsuleRect??host.rect,carrier=`capsule-release:${id}:${Math.round(performance.now())}`,start=performance.now();
  const restoredMembers=snapshot.members.map(member=>restored(member,snapshot));
+ const originalIds=new Set([...Object.keys(initial.windows),...snapshot.members.map(member=>member.id),carrier]);
  beginMaterial([carrier]);
  const duration=.22+Math.max(0,snapshot.members.length-1)*.16+.72;
  const animate=(now:number)=>{
   if(!animating)return;
-  const elapsed=(now-start)/1000,windows={...initial.windows};
+  const elapsed=(now-start)/1000,live=kernel.getState(),windows={...initial.windows};
   delete windows[id];
   const rupture=ease(elapsed/.65);
   windows[carrier]={...host,id:carrier,form:'capsule',minimized:false,capsuleRect:source,props:{...host.props,agentCapsuleBusy:true,agentCapsuleRupture:rupture}};
@@ -49,8 +56,11 @@ export function restoreCapsule(id:string,continuingGesture=false){
   }
   const finished=elapsed>=duration;
   if(finished){delete windows[carrier];for(const member of restoredMembers){windows[member.id]=member;readingProgress.set(member.id,snapshot.scroll[member.id]??0);}}
-  const order=[...snapshot.order.filter(key=>windows[key]),...initial.order.filter(key=>windows[key]&&!snapshot.order.includes(key)),...(!finished?[carrier]:[])];
-  kernel.previewState({...initial,windows,order,focusedId:finished?(windows[snapshot.focusedId??'']?snapshot.focusedId:snapshot.members[0]?.id??null):carrier});
+  // Keep windows opened while the release animation is running.
+  for(const [liveId,liveWindow] of Object.entries(live.windows))if(!originalIds.has(liveId))windows[liveId]=liveWindow;
+  const order=[...snapshot.order.filter(key=>windows[key]),...initial.order.filter(key=>windows[key]&&!snapshot.order.includes(key)),...live.order.filter(key=>windows[key]&&!originalIds.has(key)),...(!finished?[carrier]:[])];
+  const lateFocus=live.focusedId&&!originalIds.has(live.focusedId)&&windows[live.focusedId]?live.focusedId:null;
+  kernel.previewState({...initial,windows,order,focusedId:lateFocus??(finished?(windows[snapshot.focusedId??'']?snapshot.focusedId:snapshot.members[0]?.id??null):carrier)});
   if(finished){stop();kernel.endGesture();toast('已依次释放窗口',true);}else animation=requestAnimationFrame(animate);
  };
  animation=requestAnimationFrame(animate);
@@ -98,7 +108,7 @@ export function packWindows(ids:string[],continuing=false,restoreBase?:KernelSta
  if(!continuing)cancelCapsuleMotion();const initial=kernel.getState(),base=restoreBase??initial;
  ids=ids.filter(id=>initial.windows[id]?.form==='normal'&&!initial.windows[id]?.minimized);if(!ids.length){if(continuing)kernel.endGesture();return;}
  if(!continuing)kernel.beginGesture('capsule:collect');
- const context=makeContext(base,workArea(),ids,[],{accepted:[],rejected:[]});
+ const context=makeContext(base,manualCapsuleWorkArea(),ids,[],{accepted:[],rejected:[]});
  const plan={id:`manual-capsule:${Math.round(performance.now())}`,title:'会话胶囊',rationale:'收纳当前工作面',priority:1,confidence:1,primaryTargets:ids,supportTargets:[],steps:[{type:'encapsulate' as const,targets:ids,edge:'right' as const}],artifacts:[]};
  const timeline=new PlanPerformance(base,plan,context,initial),start=performanceNow();animating=true;beginMaterial(ids);
  const frame=(now:number)=>{if(!animating)return;const result=timeline.at((now-start)/1000),collected=ids.every(id=>result.state.windows[id]?.form==='capsule'||result.state.windows[id]?.minimized);kernel.previewState(collected?timeline.final:result.state);

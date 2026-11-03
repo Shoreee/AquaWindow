@@ -1,5 +1,6 @@
 import type {WindowState} from "../kernel/types";
 import {materialActivity} from "../agent/adaptive/material";
+import {manualCursorDragActive} from "../agent/adaptive/manualMotion";
 import { memo, useEffect, useRef, useState } from "react";
 import type { AgentMotion } from "../agent/adaptive/choreography";
 import { PRIMITIVE_LABELS, type AgentView, type Primitive } from "../agent/adaptive/types";
@@ -8,6 +9,10 @@ import { adaptation, pointer, serviceStore } from "../agent/adaptive/runtime";
 import { statusMessages } from "../agent/adaptive/buffer";
 import { useStore } from "../system/createStore";
 import { kernel } from "../system/kernel";
+import { ui } from "../system/ui";
+import {surfaceUi} from './surfaceFusion';
+import {allSurfaceBonds,seamGeometry} from './surfaceBondGeometry';
+import {visualRect} from '../techniques/depth';
 import {
   createAgentRenderer,
   type EnergyScene,
@@ -50,7 +55,6 @@ function AgentSceneImpl() {
     }
     const gpu = !!foreground;
     if (!gpu) setFallback(true);
-    document.documentElement.classList.add("agent-cursor-enabled");
     const motion = matchMedia("(prefers-reduced-motion: reduce)");
     type Coupling = {
       age: number;
@@ -131,10 +135,20 @@ function AgentSceneImpl() {
       if (dt > 0.026) slow++;
       else slow = Math.max(0, slow - 1);
       if (slow > 24) quality = 1;
-      const s = adaptation.store.get(),manual=materialActivity.get(),
-        active = (s.phase !== "idle"&&s.phase!=="returning");
+      const s = adaptation.store.get(),manual=materialActivity.get(),surface=surfaceUi.get(),surfaceVisual=!!(surface.split||surface.push),
+        active = (s.phase !== "idle"&&s.phase!=="returning"),
+        dragCursor = !ui.get().agentEnabled && manualCursorDragActive();
+      const customCursor=ui.get().agentEnabled||dragCursor||surfaceVisual;
+      document.documentElement.classList.toggle("agent-cursor-enabled",customCursor);
+      if(!customCursor&&!manual.active&&!active&&!couplings.size){
+        if(front.current)front.current.style.visibility='hidden';
+        if(cursor.current)cursor.current.style.opacity='0';
+        frame=requestAnimationFrame(render);
+        return;
+      }
+      if(front.current)front.current.style.visibility='visible';
       const returningAge = Math.max(0, ...[...couplings.values()].map((c) => c.age * c.fade));
-      const target = active ? activationAt(now - s.startedAt) : smooth(returningAge / .65);
+      const target = active ? activationAt(now - s.startedAt) : dragCursor||surfaceVisual ? 1 : smooth(returningAge / .65);
       // A critically damped spring changes the SAME vertices in both directions.
       for (let step = 0; step < 4; step++) {
         const h = dt / 4;
@@ -143,7 +157,7 @@ function AgentSceneImpl() {
       }
       morph = Math.max(0, Math.min(1, morph));
       const charging = active ? smooth((now - s.startedAt - 420) / 2080) : 0;
-      const goalEnergy = active
+      const goalEnergy = dragCursor||surfaceVisual ? .7 : active
         ? s.phase === "frozen"
           ? 0.6
           : 0.35 + charging * 0.75
@@ -182,19 +196,37 @@ function AgentSceneImpl() {
         bodyY = motion.matches
           ? pointer.y
           : pointer.y + (coreY - pointer.y) * morph;
-      const shown = pointer.visible || active;
+      const shown = pointer.visible || active || dragCursor;
       if (ambience.current) ambience.current.style.opacity = String(morph);
       if (cursor.current) {
         cursor.current.style.transform = `translate3d(${pointer.x}px,${pointer.y}px,0)`;
         cursor.current.style.opacity =
-          shown && (!gpu || pointer.kind !== "arrow")
+          customCursor && shown && (!gpu || pointer.kind !== "arrow")
             ? String(1 - smooth(morph))
             : "0";
-        cursor.current.dataset.kind = active ? "arrow" : pointer.kind;
+        cursor.current.dataset.kind = active || dragCursor ? "arrow" : pointer.kind;
       }
       if (hint.current)
         hint.current.style.transform = `translate3d(${Math.min(innerWidth - 300, Math.max(12, pointer.x + 24))}px,${(pointer.y + 132 < innerHeight - 75 ? pointer.y + 132 : Math.max(12, pointer.y - 78))}px,0)`;
       const state = kernel.getState();
+      const surfaceCores:NonNullable<EnergyScene['extraCores']>=[];
+      const fluidPair=(x:number,y:number,axis:'x'|'y',progress:number)=>{
+        const spread=8+38*smooth(progress),daughter=smooth((progress-.05)/.5),parent=1-smooth((progress-.02)/.72);
+        if(parent>.001)surfaceCores.push({x,y,opacity:parent,phase:0});
+        if(daughter>.001){
+          surfaceCores.push({x:x-(axis==='x'?spread:0),y:y-(axis==='y'?spread:0),opacity:daughter,phase:.19});
+          surfaceCores.push({x:x+(axis==='x'?spread:0),y:y+(axis==='y'?spread:0),opacity:daughter,phase:.58});
+        }
+      };
+      if(surface.split){
+        const bond=allSurfaceBonds(state).find(item=>item.id===surface.split?.id);
+        if(bond){
+          const seam=seamGeometry(visualRect(state.windows[bond.a],state.screen),visualRect(state.windows[bond.b],state.screen),bond.axis);
+          const along=seam.lo+seam.length*(surface.split.fromEnd?1-surface.split.progress:surface.split.progress);
+          const normal=(seam.first+seam.second)/2;
+          fluidPair(bond.axis==='x'?normal:along,bond.axis==='x'?along:normal,bond.axis,surface.split.progress);
+        }
+      }else if(surface.push)fluidPair(surface.push.x,surface.push.y,surface.push.axis,surface.push.progress);
       const reveals=s.plan?.steps.filter(step=>step.type==='peel')??[];
       const revealTargets=new Set(reveals.flatMap(step=>step.targets));
       const subjects = active
@@ -524,7 +556,8 @@ function AgentSceneImpl() {
         depletion: [...depletion],
         roots: [...roots],
         transport,
-        core: shown && (morph > .001 || pointer.kind === "arrow"),
+        core: !surfaceVisual && shown && (morph > .001 || pointer.kind === "arrow"),
+        extraCores:surfaceCores,
         links,
       };
       if (import.meta.env.DEV && front.current)

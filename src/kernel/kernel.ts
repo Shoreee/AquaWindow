@@ -88,6 +88,11 @@ export class WindowKernel {
   previewState(snapshot: KernelState) {
     this.commit({ ...snapshot, screen: this.state.screen }, { actor: 'agent', type: 'adaptation.preview' });
   }
+  restoreWorkspace(snapshot: KernelState) {
+    this.history = [];
+    this.gesture = null;
+    this.commit({ ...snapshot, screen: this.state.screen });
+  }
   commitAdaptation(before: KernelState, label: string) {
     this.history.push({ label, actor: 'agent', t: this.now(), before });
     if (this.history.length > 80) this.history.shift();

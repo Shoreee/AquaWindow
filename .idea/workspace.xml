@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="CMakeProjectFlavorService">
+    <option name="flavorId" value="CMakePlainProjectFlavor" />
+  </component>
+  <component name="CMakeSettings">
+    <configurations />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="3789fe63-47b7-4ff7-b260-66ac6da236d5" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/research/paper-reading-experiment-environment.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/research/paper-reading-experiment-environment.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/study-interactions-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/study-interactions-e2e.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/StudyMaterials.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyMaterials.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/field/agentRenderer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/field/agentRenderer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/AgentScene.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/AgentScene.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/Desktop.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/Desktop.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/SystemChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/SystemChrome.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/Window.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/Window.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shell/surfaceFusion.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/surfaceFusion.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/ScreenshotCapture.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/ScreenshotCapture.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/TaskCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/TaskCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/interactionModes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/interactionModes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/styles/agent.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/styles/agent.css" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="User-experiment" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;themanfromyiyang&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/themanfromyiyang/AquaWindow.git&quot;,
+    &quot;accountId&quot;: &quot;1b2ce2e0-8c72-4a27-9aae-9dfbc83abc58&quot;
+  }
+}</component>
+  <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3LMMsQVrU6OHRWcBiehhchPSJec" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "cidr.known.project.marker": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "User-experiment-split",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "pnpm"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="3789fe63-47b7-4ff7-b260-66ac6da236d5" name="更改" comment="" />
+      <created>1793259691353</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1793259691353</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="UnityCheckinConfiguration" checkUnsavedScenes="true" />
+  <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="User-experiment-split" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+    <MESSAGE value="Soften fusion junctions and add flowing boundary anticipation" />
+    <MESSAGE value="新增 Agent 总开关并默认关闭自适应感知" />
+    <MESSAGE value="新增学习工作区界面与任务卡片，并优化拖拽光标联动" />
+    <MESSAGE value="无法生成提交信息：本次代码变更内容为空，没有可供分析的代码差异。请提供具体的变更内容。" />
+    <MESSAGE value="重构学习材料窗口：新增浏览器组件与胶囊缩略图，持久化 PDF 与问答状态。新增五种交互，但是混合在一起的版本" />
+    <MESSAGE value="重构学习交互为五种独立模式：顶部菜单显式选择，切换时重置窗口并简化 PDF 为连续滚动渲染" />
+    <MESSAGE value="新增截图停靠交互模式：支持框选论文内容生成截图窗口并沿流体轨迹停靠，更新六种模式文档与 E2E 测试" />
+    <option name="LAST_COMMIT_MESSAGE" value="新增截图停靠交互模式：支持框选论文内容生成截图窗口并沿流体轨迹停靠，更新六种模式文档与 E2E 测试" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
+          <properties exception="System.OperationCanceledException" breakIfHandledByOtherCode="false" displayValue="System.OperationCanceledException" />
+          <option name="timeStamp" value="1" />
+        </breakpoint>
+        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
+          <properties exception="System.Threading.Tasks.TaskCanceledException" breakIfHandledByOtherCode="false" displayValue="System.Threading.Tasks.TaskCanceledException" />
+          <option name="timeStamp" value="2" />
+        </breakpoint>
+        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
+          <properties exception="System.Threading.ThreadAbortException" breakIfHandledByOtherCode="false" displayValue="System.Threading.ThreadAbortException" />
+          <option name="timeStamp" value="3" />
+        </breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

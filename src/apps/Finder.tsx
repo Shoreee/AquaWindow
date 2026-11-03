@@ -6,6 +6,8 @@ import { AGENT_FILES, FOLDERS, FS, type FsEntry } from './data/fs';
 import { paperById } from './data/papers';
 import { appState } from './state';
 import { openNear } from './open';
+import {fileTaskStore} from '../study/workspaces';
+import {studyDocument,studyFileEntries} from './data/studies';
 
 const KIND_ICON: Record<FsEntry['kind'], string> = {
   pdf: '📄',
@@ -20,11 +22,14 @@ const KIND_ICON: Record<FsEntry['kind'], string> = {
 
 function haystack(e: FsEntry) {
   const p = e.paperId ? paperById(e.paperId) : null;
-  return [p?.title, p?.abstract, p?.keywords.join(' '), e.provenance?.context, e.provenance?.task, e.agent?.note].filter(Boolean).join(' ').toLowerCase();
+  const study=e.studyDocumentId?studyDocument(e.studyDocumentId):null;
+  return [p?.title, p?.abstract, p?.keywords.join(' '),study?.title,study?.abstract,e.provenance?.context, e.provenance?.task, e.agent?.note].filter(Boolean).join(' ').toLowerCase();
 }
 
 export default function Finder({ win }: { win: WindowState }) {
   const tech = useStore(ui, (s) => s.tech);
+  const fileTaskId=useStore(fileTaskStore,s=>s.current);
+  const fileEnvironment=useStore(ui,s=>s.studyEnvironment)==='files';
   const created = useStore(appState, (s) => s.agentFilesCreated);
   const quarantined = useStore(appState, (s) => s.quarantined);
   const kept = useStore(appState, (s) => s.kept);
@@ -39,7 +44,7 @@ export default function Finder({ win }: { win: WindowState }) {
 
   const agentMade = AGENT_FILES.slice(0, created);
   const entries = useMemo(() => {
-    const all = [...FS, ...agentMade].filter((e) => !quarantined.includes(e.name));
+    const all:FsEntry[] = fileEnvironment?studyFileEntries(fileTaskId):[...FS,...agentMade].filter((e) => !quarantined.includes(e.name));
     if (footprint) return agentMade;
     if (path === 'Recents') return [...all].filter((e) => e.kind !== 'folder').sort((a, b) => a.age - b.age).slice(0, 14);
     if (q) return all.filter((e) => e.dir === path || e.dir.startsWith(path + '/'));
@@ -54,7 +59,7 @@ export default function Finder({ win }: { win: WindowState }) {
       .filter((n) => !inDir.some((e) => e.kind === 'folder' && e.name === n))
       .map((n) => ({ name: n, dir: path, kind: 'folder', size: '—', modified: 'Today', age: 0 }));
     return [...inDir, ...implicit].sort((a, b) => (a.kind === 'folder' ? 0 : 1) - (b.kind === 'folder' ? 0 : 1));
-  }, [path, footprint, agentMade, quarantined, q]);
+  }, [path, footprint, agentMade, quarantined, q,fileEnvironment,fileTaskId]);
 
   const nameMatch = (e: FsEntry) => e.name.toLowerCase().includes(q.toLowerCase());
   const semMatch = (e: FsEntry) => haystack(e).includes(q.toLowerCase());
@@ -83,6 +88,7 @@ export default function Finder({ win }: { win: WindowState }) {
       kernel.setTitle(win.id, e.name);
       return;
     }
+    if(e.studyDocumentId){openNear(win,{appId:'file-study',title:e.name,props:{studyDocumentId:e.studyDocumentId},role:'reference',size:{w:620,h:700}});return;}
     if (e.kind === 'pdf' && e.paperId) {
       openNear(win, { appId: 'preview', title: e.name, props: { paperId: e.paperId }, role: 'reference', size: { w: 620, h: 700 } });
     } else if (e.kind === 'code' || e.kind === 'log' || e.kind === 'doc') {
@@ -104,7 +110,7 @@ export default function Finder({ win }: { win: WindowState }) {
     <div className="finder">
       <aside className="finder-side">
         <div className="side-h">Favorites</div>
-        {FOLDERS.map((f) => (
+        {(fileEnvironment?['Downloads','Desktop']:FOLDERS).map((f) => (
           <button
             key={f}
             className={`side-i ${!footprint && path === f ? 'on' : ''}`}
@@ -117,7 +123,7 @@ export default function Finder({ win }: { win: WindowState }) {
             {f.split('/').pop()}
           </button>
         ))}
-        {tech.provenance && (
+        {!fileEnvironment&&tech.provenance && (
           <>
             <div className="side-h">Provenance</div>
             <button className={`side-i ${footprint ? 'on' : ''}`} onClick={() => kernel.setProps(win.id, { view: 'footprint' })}>

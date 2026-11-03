@@ -1,6 +1,11 @@
 import type { ComponentType } from 'react';
 import type { WindowRole, WindowState } from '../kernel/types';
 import Browser from './Browser';
+import EmptyWindow from './EmptyWindow';
+import StudyMaterials from './StudyMaterials';
+import FileStudyDocument from './FileStudyDocument';
+import FileStudyGuide from './FileStudyGuide';
+import FileStudyGallery,{FileStudyCapture} from './FileStudyGallery';
 import Chat from './Chat';
 import { Canvas, RefImage } from './Design';
 import Finder from './Finder';
@@ -27,6 +32,12 @@ export interface AppDef {
 }
 
 export const APPS: Record<string, AppDef> = {
+  study: { id: 'study', name: '论文材料', Component: StudyMaterials, size: { w: 660, h: 620 }, role: 'reference' },
+  'file-study': {id:'file-study',name:'文件材料',Component:FileStudyDocument,size:{w:620,h:700},role:'reference'},
+  'file-study-guide': {id:'file-study-guide',name:'任务说明',Component:FileStudyGuide,size:{w:900,h:142},role:'primary'},
+  'file-study-gallery': {id:'file-study-gallery',name:'图库',Component:FileStudyGallery,size:{w:620,h:500},role:'tool'},
+  'file-study-capture': {id:'file-study-capture',name:'文件截图',Component:FileStudyCapture,size:{w:420,h:440},role:'reference'},
+  blank: { id: 'blank', name: '空窗口', Component: EmptyWindow, size: { w: 550, h: 570 }, role: 'primary' },
   guide: { id: 'guide', name: 'AquaWindow Guide', Component: Guide, size: { w: 760, h: 600 }, role: 'system', dock: true },
   finder: { id: 'finder', name: 'Finder', Component: Finder, size: { w: 760, h: 460 }, role: 'tool', dock: true, defaultProps: { path: 'Downloads' } },
   preview: { id: 'preview', name: 'Preview', Component: Preview, size: { w: 600, h: 720 }, role: 'reference', dock: true, defaultProps: { paperId: '2403.11872' }, peripheral: true },

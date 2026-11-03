@@ -9,6 +9,7 @@ export interface FsEntry {
   /** Minutes ago — for sorting. */
   age: number;
   paperId?: string;
+  studyDocumentId?: string;
   provenance?: {
     source: string;
     context: string;
