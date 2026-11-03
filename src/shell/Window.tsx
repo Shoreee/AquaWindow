@@ -71,8 +71,9 @@ const studyDesktop=!(import.meta.env.DEV&&new URLSearchParams(location.search).g
 function snapTarget(x: number, y: number): Rect | null {
   const W = workArea();
   const { w } = kernel.getState().screen;
-  if (x < 6) return { x: W.x, y: W.y, w: W.w / 2 - 4, h: W.h };
-  if (x > w - 6) return { x: W.x + W.w / 2 + 4, y: W.y, w: W.w / 2 - 4, h: W.h };
+  const edge = 24;
+  if (x <= edge) return { x: W.x, y: W.y, w: W.w / 2 - 4, h: W.h };
+  if (x >= w - edge) return { x: W.x + W.w / 2 + 4, y: W.y, w: W.w / 2 - 4, h: W.h };
   if (y < MENUBAR + 2) return W;
   return null;
 }
@@ -140,7 +141,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
 
   // ── focus / depth pull ────────────────────────────────────────────────────
   const onPointerDownCapture = (e: RPE) => {
-    if((e.target as HTMLElement).closest('.file-study-submit button'))return;
+    if((e.target as HTMLElement).closest('.file-study-submit button,.file-study-compact'))return;
     if (e.button !== 0 || (e.target as HTMLElement).closest(".agent-anchor,[data-agent-result],[data-reveal-handle],[data-capsule-id]")) return;
     if (win.depth > 0.05 && !e.altKey) {
       if (win.group?.startsWith('trail')) rerankTrail(kernel, win.group, win.id, 'trail:pull');

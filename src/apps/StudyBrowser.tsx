@@ -1,21 +1,21 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {kernel} from '../system/kernel';
 
-const root=`${import.meta.env.BASE_URL}study/external/`;
+const root=`${import.meta.env.BASE_URL}study/attention-zh/`;
 const pages=[
   {
-    id:'bilibili',
-    site:'bilibili.com',
-    title:'AutoUE: Automated 3D Game Generation in Unreal Engine via Multi-Agent Systems · Bilibili',
-    url:root+encodeURIComponent('AutoUE_ Automated 3D Game Generation in Unreal Engine via Multi-Agent Systems_哔哩哔哩_bilibili.html'),
-    keywords:'autoue bilibili 哔哩哔哩 演示视频 演示 视频 automated game generation',
+    id:'google-research',
+    site:'research.google',
+    title:'Transformer: A Novel Neural Network Architecture for Language Understanding · Google Research',
+    url:root+'transformer-google-research.html',
+    keywords:'transformer google research novel neural network architecture language understanding 介绍 自注意力',
   },
   {
-    id:'github',
-    site:'github.com/Pluto156/AutoUE',
-    title:'Pluto156/AutoUE · GitHub',
-    url:root+'Pluto156_AutoUE.html',
-    keywords:'autoue github pluto156 项目 仓库 代码',
+    id:'arxiv',
+    site:'arxiv.org/abs/1706.03762',
+    title:'Attention Is All You Need · arXiv',
+    url:root+'attention-arxiv.html',
+    keywords:'attention is all you need arxiv 1706.03762 transformer paper 论文',
   },
 ] as const;
 type SavedBrowser={draft:string;query:string;selectedId:string|null;scroll:number};
@@ -62,7 +62,7 @@ export default function StudyBrowser({windowId}:{windowId:string}){
       <button type="submit">搜索</button>
     </form>
     {selected?<>
-      <div className="study-browser-page-label">{selected.site} · 离线网页存档{selected.id==='bilibili'?' · 视频不可播放':''}</div>
+      <div className="study-browser-page-label">{selected.site} · 离线阅读页</div>
       <iframe key={selected.id} src={selected.url} title={selected.title} sandbox="allow-same-origin" referrerPolicy="no-referrer" onLoad={event=>onFrameLoad(event.currentTarget)}/>
     </>:<div className="study-browser-results">
       {!query?<div className="study-browser-empty"><span aria-hidden="true">◌</span><h2>浏览器</h2><p>输入网页名称或地址以查找材料。</p></div>:

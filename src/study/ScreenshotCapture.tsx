@@ -44,11 +44,13 @@ export function ScreenshotCapture(){
   const [start,setStart]=useState<Point|null>(null),[end,setEnd]=useState<Point|null>(null),[sourceId,setSourceId]=useState<string|null>(null);
   useEffect(()=>{
     const activate=()=>{
+      if(ui.get().studyEnvironment==='files')return;
       const source=sourceWindow();
       if(!source){toast('请先打开论文窗口');return;}
       kernel.focus(source.id);setSourceId(source.id);setStart(null);setEnd(null);
     };
     const key=(event:KeyboardEvent)=>{
+      if(ui.get().studyEnvironment==='files')return;
       if(event.key==='Escape'){setSourceId(null);return;}
       if(event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.repeat&&event.key.toLowerCase()==='s'){
         const target=event.target as HTMLElement|null;

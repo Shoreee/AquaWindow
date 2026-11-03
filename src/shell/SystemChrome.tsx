@@ -13,7 +13,7 @@ import {toast} from '../system/ui';
 import {studyInteractionModes,studyTechniques,type StudyInteractionModeId} from '../study/interactionModes';
 import {openStudyResource} from '../apps/StudyMaterials';
 import {openApp} from './Chrome';
-import {fileTaskStore,openFileTask,switchStudyEnvironment,type StudyEnvironment} from '../study/workspaces';
+import {fileLayoutModes,fileTaskStore,openFileTask,selectFileLayoutMode,switchStudyEnvironment,type StudyEnvironment} from '../study/workspaces';
 
 export function bootDesktop(studyMode:StudyInteractionModeId|null=ui.get().studyMode) {
   cancelSurfaceInteraction();
@@ -58,6 +58,7 @@ function SystemMenuBarImpl() {
   const studyMode = useStore(ui, (s) => s.studyMode);
   const studyEnvironment=useStore(ui,s=>s.studyEnvironment);
   const fileRunning=useStore(fileTaskStore,s=>s.running);
+  const fileLayoutMode=useStore(fileTaskStore,s=>s.layoutMode);
   const [menu, setMenu] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
   const ref = useRef<HTMLDivElement>(null);
@@ -130,9 +131,9 @@ function SystemMenuBarImpl() {
       </button>
       <button className="mb-item study-environment-trigger" aria-expanded={menu==='study-environment'} onClick={()=>setMenu(menu==='study-environment'?null:'study-environment')}>实验环境：{studyEnvironment==='paper'?'论文阅读':'文件管理'}</button>
       <button className="mb-item study-mode-trigger" disabled={studyEnvironment==='files'&&fileRunning} aria-expanded={menu==='study-mode'} onClick={()=>setMenu(menu==='study-mode'?null:'study-mode')}>
-        交互形式：{studyMode?studyInteractionModes.find(item=>item.id===studyMode)?.label:'请选择'}
+        交互形式：{studyEnvironment==='files'?(fileLayoutMode?fileLayoutModes.find(item=>item.id===fileLayoutMode)?.label:'请选择'):(studyMode?studyInteractionModes.find(item=>item.id===studyMode)?.label:'请选择')}
       </button>
-      <button className="mb-item" aria-label="截图（Shift+S）" onClick={()=>window.dispatchEvent(new Event('study:screenshot:start'))}>截图 <kbd>Shift+S</kbd></button>
+      {studyEnvironment==='paper'&&<button className="mb-item" aria-label="截图（Shift+S）" onClick={()=>window.dispatchEvent(new Event('study:screenshot:start'))}>截图 <kbd>Shift+S</kbd></button>}
       <div className="mb-spacer" />
       {agentOn && <span
         className={`agent-service ${status === "ready" || status === "local" ? "ready" : ""}`}
@@ -228,12 +229,12 @@ function SystemMenuBarImpl() {
             </>
           )}
           {menu === 'study-mode' && <>
-            <p className="study-mode-menu-intro">每次只启用一种交互形式。涡虫拖动始终保留。</p>
-            {studyInteractionModes.map(item=><button key={item.id} className={`study-mode-option${studyMode===item.id?' selected':''}`} aria-pressed={studyMode===item.id} onClick={action(()=>selectStudyMode(item.id))}>
+            <p className="study-mode-menu-intro">{studyEnvironment==='files'?'选择候选文件的呈现方式。':'每次只启用一种交互形式。涡虫拖动始终保留。'}</p>
+            {studyEnvironment==='files'?fileLayoutModes.map(item=><button key={item.id} className={`study-mode-option${fileLayoutMode===item.id?' selected':''}`} aria-pressed={fileLayoutMode===item.id} onClick={action(()=>selectFileLayoutMode(item.id))}><span><strong>{item.label}</strong><small>{item.description}</small></span><i aria-hidden="true">{fileLayoutMode===item.id?'✓':''}</i></button>):studyInteractionModes.map(item=><button key={item.id} className={`study-mode-option${studyMode===item.id?' selected':''}`} aria-pressed={studyMode===item.id} onClick={action(()=>selectStudyMode(item.id))}>
               <span><strong>{item.label}</strong><small>{item.description}</small></span><i aria-hidden="true">{studyMode===item.id?'✓':''}</i>
             </button>)}
-            {studyMode==='fusion'&&<><div className="mb-sep"/><button onClick={action(prepareShake)}>准备已融合窗口</button></>}
-            <p className="study-mode-menu-foot">切换交互形式会保留已打开的窗口和阅读位置。</p>
+            {studyEnvironment==='paper'&&studyMode==='fusion'&&<><div className="mb-sep"/><button onClick={action(prepareShake)}>准备已融合窗口</button></>}
+            <p className="study-mode-menu-foot">{studyEnvironment==='files'?'选择后点击任务说明中的“开始任务”展示候选文件。':'切换交互形式会保留已打开的窗口和阅读位置。'}</p>
           </>}
           {menu==='study-environment'&&<><p className="study-mode-menu-intro">两个环境的窗口与任务分别保留。</p><button className="study-mode-option" aria-pressed={studyEnvironment==='paper'} onClick={action(()=>selectEnvironment('paper'))}><span><strong>论文阅读</strong><small>AutoUE 阅读与对照任务</small></span></button><button className="study-mode-option" aria-pressed={studyEnvironment==='files'} onClick={action(()=>selectEnvironment('files'))}><span><strong>文件管理</strong><small>找论文、找代码、整理遗留文件</small></span></button></>}
         </div>
@@ -244,7 +245,7 @@ function SystemMenuBarImpl() {
 
 function SystemDockImpl() {
   const environment=useStore(ui,s=>s.studyEnvironment);
-  const apps=environment==='paper'?[{id:'finder',label:'文件',resource:'files'},{id:'browser',label:'浏览器',resource:'browser'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'},{id:'gallery',label:'图库',resource:'gallery'}]:[{id:'finder',label:'文件',resource:'finder'},{id:'file-study-gallery',label:'图库',resource:'file-study-gallery'}];
+  const apps=environment==='paper'?[{id:'finder',label:'文件',resource:'files'},{id:'browser',label:'浏览器',resource:'browser'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'},{id:'gallery',label:'图库',resource:'gallery'}]:[{id:'finder',label:'文件',resource:'finder'}];
   const running=useKernelState(s=>apps.reduce((bits,app,index)=>Object.values(s.windows).some(w=>environment==='paper'?w.appId==='study'&&w.props.resource===app.resource&&!w.minimized:w.appId===app.id&&!w.minimized)?bits|(1<<index):bits,0));
   return (
     <div className="dock-wrap">

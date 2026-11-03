@@ -27,21 +27,29 @@ try{
   assert.equal(await page.locator('.study-mode-trigger').textContent(),'交互形式：请选择');
   await page.locator('.study-mode-trigger').click();
   assert.equal(await page.locator('.study-mode-option').count(),5);
+  assert.equal(await page.locator('.study-mode-option').filter({hasText:'边界退让'}).count(),0);
   assert.equal(await page.locator('.study-mode-option').filter({hasText:'抖动分裂'}).count(),0);
   assert.ok((await page.locator('.study-mode-option').filter({hasText:'融合与拆分'}).textContent())?.includes('左右抖动'));
   await page.locator('.study-mode-trigger').click();
 
-  const preselectionPdf=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'AutoUE.pdf',rect:{x:220,y:110,w:660,h:620},props:{resource:'pdf',taskId:'comparison'}}));
+  const fileListId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'文件',rect:{x:120,y:100,w:500,h:560},props:{resource:'files',taskId:'comparison'}}));
+  const fileList=root(fileListId).locator('.study-file-list');
+  assert.equal(await fileList.locator('button').count(),5);
+  assert.equal(await fileList.getByRole('button',{name:'AutoUE.pdf'}).count(),0);
+  await fileList.getByRole('button',{name:'Attention Is All You Need 中文版.pdf'}).click();
+  const preselectionPdf=await page.evaluate(()=>window.__aw.kernel.list().find(win=>win.props.resource==='pdf'&&win.props.taskId==='comparison')?.id);
+  assert.ok(preselectionPdf);
+  await page.evaluate(id=>window.__aw.kernel.close(id),fileListId);
   await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page[data-page="1"] canvas`)?.style.visibility==='visible',preselectionPdf);
   await root(preselectionPdf).locator('.study-pdf-scroll').evaluate(element=>{element.scrollTop=480;});
   await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-scroll`)?.scrollTop>400,preselectionPdf);
   const savedPreselectionScroll=await root(preselectionPdf).locator('.study-pdf-scroll').evaluate(element=>element.scrollTop);
-  await selectMode('边界退让','yield',false);
+  await selectMode('截图停靠','screenshot',false);
   assert.ok(await page.evaluate(id=>!!window.__aw.kernel.get(id),preselectionPdf),'First mode selection keeps the open PDF');
   assert.ok(Math.abs((await root(preselectionPdf).locator('.study-pdf-scroll').evaluate(element=>element.scrollTop))-savedPreselectionScroll)<8,'First mode selection keeps reading position');
   await selectMode('重要区域透出','reveal',false);
   assert.ok(Math.abs((await root(preselectionPdf).locator('.study-pdf-scroll').evaluate(element=>element.scrollTop))-savedPreselectionScroll)<8,'Later mode switching keeps reading position');
-  await selectMode('边界退让','yield',false);
+  await selectMode('截图停靠','screenshot',false);
   await page.evaluate(id=>window.__aw.kernel.close(id),preselectionPdf);
   let ids=await openPair();
   const dragTitle=await root(ids.a).locator('.aw-title').boundingBox();
@@ -56,7 +64,7 @@ try{
   assert.equal(await page.getByRole('menuitem',{name:'框选重要区域'}).count(),0);
   assert.equal(await page.getByRole('menuitem',{name:'收为胶囊…'}).count(),0);
   await page.keyboard.press('Escape');
-  await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"]`)?.classList.contains('dented'),ids.a);
+  assert.equal(await root(ids.a).evaluate(element=>element.classList.contains('dented')),false);
 
   await selectMode('重要区域透出','reveal');
   ids=await openPair();
@@ -100,7 +108,7 @@ try{
   await page.waitForFunction(({a,b})=>!window.__aw.kernel.get(a)?.group&&!window.__aw.kernel.get(b)?.group,ids);
 
   await selectMode('胶囊与提案预览','capsule');
-  const pdfId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'AutoUE.pdf',rect:{x:250,y:105,w:660,h:620},props:{resource:'pdf',taskId:'comparison'}}));
+  const pdfId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'Attention Is All You Need 中文版.pdf',rect:{x:250,y:105,w:660,h:620},props:{resource:'pdf',taskId:'comparison'}}));
   const pdfWindow=root(pdfId);
   await page.waitForFunction(id=>document.querySelectorAll(`[data-win="${id}"] .study-pdf-page`).length>2,pdfId);
   await pdfWindow.locator('.study-pdf-scroll').hover();
@@ -137,7 +145,7 @@ try{
   assert.equal(await pdfWindow.locator('.study-pdf-toolbar span').last().textContent(),'120%');
   assert.ok(Math.abs((await pdfScroll.evaluate(element=>element.scrollTop))-beforeScroll)<8,'PDF reading position survives capsule restoration');
   await selectMode('截图停靠','screenshot');
-  const sourceId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'AutoUE.pdf',rect:{x:190,y:110,w:660,h:620},props:{resource:'pdf',taskId:'screenshot'}}));
+  const sourceId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'Attention Is All You Need 中文版.pdf',rect:{x:190,y:110,w:660,h:620},props:{resource:'pdf',taskId:'screenshot'}}));
   await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page[data-page="1"] canvas`)?.style.visibility==='visible',sourceId);
   assert.equal(await page.getByRole('button',{name:'截图（Shift+S）'}).count(),1);
   await page.keyboard.press('Shift+s');
@@ -151,7 +159,7 @@ try{
   assert.equal(await root(captureId).locator('.study-captured-image img').count(),1);
   assert.ok(await page.evaluate(({sourceId,captureId})=>{const k=window.__aw.kernel,s=k.get(sourceId).rect,c=k.get(captureId).rect,screen=k.getState().screen;return c.x>=s.x+s.w+3&&Math.abs(c.x+c.w-(screen.w-8))<2&&Math.abs(c.y-36)<2&&Math.abs(c.h-(screen.h-28-78-16))<2;},{sourceId,captureId}),'Fused screenshot fills remaining desktop beside source');
   assert.ok(await page.locator('.surface-seam-hit').count()>0,'Fused screenshot exposes a separable seam');
-  await selectMode('边界退让','yield',false);
+  await selectMode('重要区域透出','reveal',false);
   await page.keyboard.press('Shift+s');
   assert.equal(await page.locator('.study-screenshot-overlay').count(),1);
   await page.mouse.move(paper.x+85,paper.y+110);await page.mouse.down();
@@ -163,5 +171,5 @@ try{
   await page.getByRole('button',{name:'打开论文截图 2'}).click();
   await page.waitForFunction(()=>window.__aw.kernel.list().filter(win=>win.props.resource==='capture').length===2);
   assert.deepEqual(errors,[]);assert.deepEqual(agentCalls,[]);
-  console.log('PASS: five modes, seam and shake splitting, screenshot docking, gallery-only capture, PDF restoration and agent-off isolation.');
+  console.log('PASS: four modes, seam and shake splitting, screenshot docking, gallery-only capture, PDF restoration and agent-off isolation.');
 }finally{await browser.close();}
