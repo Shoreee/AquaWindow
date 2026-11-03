@@ -1,6 +1,6 @@
-import { area, intersect, overlapArea, regionToScreen, TITLEBAR } from '../kernel/geometry';
+import { intersect, regionToScreen, TITLEBAR } from '../kernel/geometry';
 import type { KernelState, Rect, WindowId, WindowState } from '../kernel/types';
-import { fluidContour, pointsToPath, scaleToFree, squirclePoints, resampleClosed, CONTOUR_SAMPLES } from '../field/sdf';
+import { pointsToPath, squirclePoints, resampleClosed, CONTOUR_SAMPLES } from '../field/sdf';
 import { depthTransform, visualRect } from './depth';
 import type { Techniques } from './techniques';
 
@@ -9,6 +9,7 @@ export interface CutHole {
   rect: Rect;
   label?: string;
   ownerId: WindowId;
+  regionId: string;
 }
 
 export interface WindowVisual {
@@ -86,7 +87,7 @@ function relaxedPath(w: number, h: number, r: number) {
   return p;
 }
 
-export function computeVisuals({ state, tech, activeId }: VisualInput): Record<WindowId, WindowVisual> {
+export function computeVisuals({ state, tech }: VisualInput): Record<WindowId, WindowVisual> {
   const order = stackingOrder(state);
   const out: Record<WindowId, WindowVisual> = {};
   const fluid = tech.shape === 'squircle';
@@ -108,39 +109,6 @@ export function computeVisuals({ state, tech, activeId }: VisualInput): Record<W
     };
   });
 
-  // ── RQ1: yielding boundaries (deform) vs. yielding by scaling ────────────────
-  const presserId = activeId ?? state.focusedId;
-  const presser = presserId ? state.windows[presserId] : undefined;
-  if (tech.yield !== 'none' && presser && !presser.minimized && presser.form === 'normal' && presser.depth < 0.05) {
-    const pIndex = order.indexOf(presser.id);
-    const pRect = presser.rect;
-    for (let i = 0; i < pIndex; i++) {
-      const w = state.windows[order[i]];
-      if (w.form !== 'normal' || w.depth >= 0.05 || w.role === 'system') continue;
-      if (presser.group && w.group === presser.group) continue;
-      // A dent is a local, readable bite. Once most of the window is covered, boolean-style
-      // yielding collapses it into a sliver; classic stacking is the more honest fallback
-      // and the agent (not the skin) should move the window.
-      if (area(w.rect) > 0 && overlapArea(w.rect, pRect) / area(w.rect) > 0.48) continue;
-      const v = out[w.id];
-      if (tech.yield === 'deform') {
-        const c = fluidContour(w.rect, radius, [{ rect: pRect, radius, gap: 12 }]);
-        if (c.dented && c.visibleRatio >= 0.58) {
-          v.clipPath = `path('${pointsToPath(c.points)}')`;
-          v.dented = true;
-          v.visibleRatio = c.visibleRatio;
-        }
-      } else {
-        const sc = scaleToFree(w.rect, pRect, 12);
-        if (sc) {
-          v.yieldScale = sc;
-          v.dented = true;
-          v.visibleRatio = sc.s * sc.s;
-        }
-      }
-    }
-  }
-
   // ── Importance-driven compositing: important regions cut through occluders ──
   if (tech.cutout) {
     order.forEach((id, i) => {
@@ -148,13 +116,16 @@ export function computeVisuals({ state, tech, activeId }: VisualInput): Record<W
       if (occ.form !== 'normal') return;
       const ov = out[id];
       const s = ov.depthT.s;
-      const holes: CutHole[] = [];
+      const holes: CutHole[] = occ.importance.filter(reg=>reg.kind==='hole').map(reg=>({
+        rect:{x:reg.x*occ.rect.w,y:TITLEBAR+reg.y*(occ.rect.h-TITLEBAR),w:reg.w*occ.rect.w,h:reg.h*(occ.rect.h-TITLEBAR)},
+        ownerId:occ.id,regionId:reg.id,
+      }));
       for (let j = 0; j < i; j++) {
         const under = state.windows[order[j]];
         const uv = out[under.id];
         if (under.form !== 'normal' || uv.dented) continue;
         for (const reg of under.importance) {
-          if (reg.weight < 0.5) continue;
+          if (reg.weight < 0.5 || reg.kind==='hole' || !reg.id.startsWith('marked:')) continue;
           const scr = regionToScreen(uv.vis, reg);
           const hit = intersect(scr, ov.vis);
           if (!hit || hit.w < 24 || hit.h < 24) continue;
@@ -162,13 +133,14 @@ export function computeVisuals({ state, tech, activeId }: VisualInput): Record<W
             rect: { x: (hit.x - ov.vis.x) / s, y: (hit.y - ov.vis.y) / s, w: hit.w / s, h: hit.h / s },
             label: reg.label,
             ownerId: under.id,
+            regionId: reg.id,
           });
         }
       }
       if (holes.length) {
         const keep: Rect[] = [{ x: 0, y: 0, w: occ.rect.w, h: TITLEBAR }];
         for (const reg of occ.importance) {
-          if (reg.weight < 0.5) continue;
+          if (reg.weight < 0.5 || reg.kind==='hole' || !reg.id.startsWith('marked:')) continue;
           keep.push({ x: reg.x * occ.rect.w, y: TITLEBAR + reg.y * (occ.rect.h - TITLEBAR), w: reg.w * occ.rect.w, h: reg.h * (occ.rect.h - TITLEBAR) });
         }
         ov.holes = holes;

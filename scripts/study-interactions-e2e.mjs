@@ -1,17 +1,18 @@
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright-core';
 
-const browser=await chromium.launch({channel:'msedge',headless:true,args:['--disable-gpu']});
+const browser=await chromium.launch({channel:process.env.AW_BROWSER??'chrome',headless:true,args:['--disable-gpu']});
 try{
   const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[],agentCalls=[];
   page.on('pageerror',error=>errors.push(String(error)));
   page.on('request',request=>{if(request.url().includes('/api/agent/'))agentCalls.push(request.url());});
-  await page.goto(process.env.AW_URL??'http://127.0.0.1:5174/');
+  await page.goto(process.env.AW_URL??'http://localhost:5173/');
   await page.waitForFunction(()=>!!window.__aw);
+  // Isolated mode checks; the experiment lifecycle is covered by desktop-system-e2e.
+  await page.evaluate(()=>window.__aw.ui.set({experimentOpen:true}));
   const selectMode=async(label,id,clearForNextScenario=true)=>{
     const openIds=await page.evaluate(()=>window.__aw.kernel.getState().order);
-    await page.locator('.study-mode-trigger').click();
-    await page.locator('.system-drop.study-mode .study-mode-option').filter({hasText:label}).click();
+    await page.evaluate(mode=>window.__aw.selectStudyMode(mode),id);
     await page.waitForFunction(mode=>window.__aw.ui.get().studyMode===mode,id);
     assert.deepEqual(await page.evaluate(()=>window.__aw.kernel.getState().order),openIds,'Mode switching preserves open windows');
     if(clearForNextScenario)await page.evaluate(()=>window.__aw.kernel.closeAll());
@@ -24,13 +25,7 @@ try{
   });
   const root=id=>page.locator(`[data-win="${id}"]`);
   assert.equal(await page.evaluate(()=>window.__aw.ui.get().studyMode),null);
-  assert.equal(await page.locator('.study-mode-trigger').textContent(),'交互形式：请选择');
-  await page.locator('.study-mode-trigger').click();
-  assert.equal(await page.locator('.study-mode-option').count(),5);
-  assert.equal(await page.locator('.study-mode-option').filter({hasText:'边界退让'}).count(),0);
-  assert.equal(await page.locator('.study-mode-option').filter({hasText:'抖动分裂'}).count(),0);
-  assert.ok((await page.locator('.study-mode-option').filter({hasText:'融合与拆分'}).textContent())?.includes('左右抖动'));
-  await page.locator('.study-mode-trigger').click();
+  assert.equal(await page.locator('.study-mode-trigger').count(),0);
 
   const fileListId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'文件',rect:{x:120,y:100,w:500,h:560},props:{resource:'files',taskId:'comparison'}}));
   const fileList=root(fileListId).locator('.study-file-list');
@@ -61,7 +56,7 @@ try{
   await page.evaluate(id=>window.__aw.kernel.setRect(id,{x:170,y:140,w:440,h:500}),ids.a);
   await page.evaluate(({b})=>{const k=window.__aw.kernel;k.setRect(b,{x:515,y:170,w:440,h:500});k.focus(b);},ids);
   await root(ids.a).locator('.aw-title').click({button:'right'});
-  assert.equal(await page.getByRole('menuitem',{name:'框选重要区域'}).count(),0);
+  assert.equal(await page.getByRole('menuitem',{name:/框选保留区域/}).count(),0);
   assert.equal(await page.getByRole('menuitem',{name:'收为胶囊…'}).count(),0);
   await page.keyboard.press('Escape');
   assert.equal(await root(ids.a).evaluate(element=>element.classList.contains('dented')),false);
@@ -69,7 +64,7 @@ try{
   await selectMode('重要区域透出','reveal');
   ids=await openPair();
   await root(ids.a).locator('.aw-title').click({button:'right'});
-  await page.getByRole('menuitem',{name:'框选重要区域'}).click();
+  await page.getByRole('menuitem',{name:/框选保留区域/}).click();
   const content=await root(ids.a).locator('.aw-content').boundingBox();
   await page.mouse.move(content.x+90,content.y+100);await page.mouse.down();
   await page.mouse.move(content.x+270,content.y+230,{steps:8});await page.mouse.up();
@@ -87,23 +82,22 @@ try{
   assert.ok(seam,'Fusion has a draggable seam');
   if(seam.height>seam.width){await page.mouse.move(seam.x+seam.width/2,seam.y+3);await page.mouse.down();await page.mouse.move(seam.x+seam.width/2,seam.y+seam.height*.55,{steps:8});}
   else{await page.mouse.move(seam.x+3,seam.y+seam.height/2);await page.mouse.down();await page.mouse.move(seam.x+seam.width*.55,seam.y+seam.height/2,{steps:8});}
-  await page.waitForFunction(()=>document.querySelector('.agent-canvas')?.__energy?.extraCores?.filter(core=>core.phase>0).length===2);
-  assert.ok(await page.evaluate(()=>document.querySelector('.agent-canvas').__energy.extraCores.every(core=>core.opacity>0)),'Seam split uses the flowing cursor material');
+  assert.ok(await page.evaluate(()=>document.querySelector('.agent-canvas').__energy.morph<.02),'Manual split keeps the pointer');
   if(seam.height>seam.width)await page.mouse.move(seam.x+seam.width/2,seam.y+seam.height+8,{steps:7});
   else await page.mouse.move(seam.x+seam.width+8,seam.y+seam.height/2,{steps:7});
   await page.mouse.up();
   await page.waitForFunction(({a,b})=>!window.__aw.kernel.get(a)?.group&&!window.__aw.kernel.get(b)?.group,ids);
 
-  await page.locator('.study-mode-trigger').click();
-  await page.getByRole('button',{name:'准备已融合窗口'}).click();
+  await page.evaluate(({a,b})=>{const k=window.__aw.kernel,r=k.get(a).rect;k.setRect(b,{...k.get(b).rect,x:r.x+r.w+8,y:r.y});},ids);
+  await root(ids.a).locator('.aw-title').click({button:'right'});
+  await page.getByRole('menuitem',{name:'与相邻窗口融合'}).click();
   await page.waitForFunction(({a,b})=>{const s=window.__aw.kernel.getState();return s.windows[a].group?.startsWith('surface:')&&s.windows[a].group===s.windows[b].group;},ids);
   await page.waitForFunction(()=>!Object.values(window.__aw.kernel.getState().windows).some(w=>w.props.surfaceAnimating));
   assert.equal(await page.locator('.surface-seam-hit').first().evaluate(element=>getComputedStyle(element).pointerEvents),'all');
   const title=await root(ids.a).locator('.aw-title').boundingBox(),x=title.x+180,y=title.y+20;
   await page.mouse.move(x,y);await page.mouse.down();
   for(const delta of [65,-65,65,-65,65])await page.mouse.move(x+delta,y,{steps:5});
-  await page.waitForFunction(()=>document.querySelector('.agent-canvas')?.__energy?.extraCores?.filter(core=>core.phase>0).length===2);
-  assert.ok(await page.evaluate(()=>document.querySelector('.agent-canvas').__energy.extraCores.some(core=>core.phase>0&&core.opacity>0)),'Shake uses the flowing cursor material to push windows');
+  assert.ok(await page.evaluate(()=>document.querySelector('.agent-canvas').__energy.morph<.02),'Shake keeps the pointer');
   await page.mouse.up();
   await page.waitForFunction(({a,b})=>!window.__aw.kernel.get(a)?.group&&!window.__aw.kernel.get(b)?.group,ids);
 
@@ -133,7 +127,7 @@ try{
   assert.ok((await pdfWindow.locator('[aria-label="当前页"]').textContent())?.startsWith('第 2 /'),'Copy has independent reading state');
   await page.evaluate(id=>window.__aw.kernel.close(id),copyId);
   await pdfWindow.locator('.aw-title').click({button:'right'});
-  assert.equal(await page.getByRole('menuitem',{name:'框选重要区域'}).count(),0);
+  assert.equal(await page.getByRole('menuitem',{name:/框选保留区域/}).count(),0);
   await page.getByRole('menuitem',{name:'收为胶囊…'}).click();
   assert.equal(await page.locator('.study-capsule-target').count(),1);
   await page.getByRole('button',{name:'确认收纳'}).click();
@@ -147,9 +141,9 @@ try{
   await selectMode('截图停靠','screenshot');
   const sourceId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'Attention Is All You Need 中文版.pdf',rect:{x:190,y:110,w:660,h:620},props:{resource:'pdf',taskId:'screenshot'}}));
   await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page[data-page="1"] canvas`)?.style.visibility==='visible',sourceId);
-  assert.equal(await page.getByRole('button',{name:'截图（Shift+S）'}).count(),1);
-  await page.keyboard.press('Shift+s');
-  assert.equal(await page.locator('.study-screenshot-overlay').count(),1);
+  await page.getByRole('button',{name:'系统控制',exact:true}).click();
+  await page.getByRole('dialog',{name:'系统控制面板'}).getByRole('button',{name:/^截图/}).click();
+  await page.locator('.study-screenshot-overlay').waitFor();
   const paper=await root(sourceId).locator('.study-pdf-page[data-page="1"] canvas').boundingBox();
   await page.mouse.move(paper.x+70,paper.y+90);await page.mouse.down();
   await page.mouse.move(paper.x+290,paper.y+270,{steps:10});await page.mouse.up();
@@ -160,13 +154,13 @@ try{
   assert.ok(await page.evaluate(({sourceId,captureId})=>{const k=window.__aw.kernel,s=k.get(sourceId).rect,c=k.get(captureId).rect,screen=k.getState().screen;return c.x>=s.x+s.w+3&&Math.abs(c.x+c.w-(screen.w-8))<2&&Math.abs(c.y-36)<2&&Math.abs(c.h-(screen.h-28-78-16))<2;},{sourceId,captureId}),'Fused screenshot fills remaining desktop beside source');
   assert.ok(await page.locator('.surface-seam-hit').count()>0,'Fused screenshot exposes a separable seam');
   await selectMode('重要区域透出','reveal',false);
-  await page.keyboard.press('Shift+s');
-  assert.equal(await page.locator('.study-screenshot-overlay').count(),1);
+  await page.keyboard.press('Control+Shift+s');
+  await page.locator('.study-screenshot-overlay').waitFor();
   await page.mouse.move(paper.x+85,paper.y+110);await page.mouse.down();
   await page.mouse.move(paper.x+270,paper.y+250,{steps:8});await page.mouse.up();
   await page.waitForFunction(()=>document.querySelector('.study-screenshot-overlay')===null);
   await page.getByRole('button',{name:'打开图库'}).click();
-  assert.equal(await page.getByRole('button',{name:'打开论文截图 2'}).count(),1);
+  await page.getByRole('button',{name:'打开论文截图 2'}).waitFor();
   assert.equal(await page.evaluate(()=>window.__aw.kernel.list().filter(win=>win.props.resource==='capture').length),1,'Other modes save without opening a screenshot window');
   await page.getByRole('button',{name:'打开论文截图 2'}).click();
   await page.waitForFunction(()=>window.__aw.kernel.list().filter(win=>win.props.resource==='capture').length===2);

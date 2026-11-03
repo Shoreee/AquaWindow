@@ -1,3 +1,4 @@
+import {observeApp} from '../agent/adaptive/observations';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {getDocument,GlobalWorkerOptions,type PDFDocumentProxy} from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
@@ -82,7 +83,7 @@ export default function StudyPdf({windowId,url,title,focused}:{windowId:string;u
   const [pdf,setPdf]=useState<PDFDocumentProxy|null>(null),[ratio,setRatio]=useState(0),[width,setWidth]=useState(0);
   const [zoom,setZoom]=useState(()=>readingState.get(windowId)?.zoom??1),[currentPage,setCurrentPage]=useState(1),[error,setError]=useState('');
   const [pinnedFigure,setPinnedFigure]=useState<number|null>(null);
-  const figurePinEnabled=useStore(ui,state=>state.studyEnvironment==='paper'&&state.studyMode==='figure-pin');
+  const figurePinEnabled=useStore(ui,state=>state.studyEnvironment==='paper'&&(!state.experimentOpen||state.studyMode==='figure-pin'));
   const supportsFigurePin=figurePinEnabled&&url.endsWith('/attention-zh/Attention-Is-All-You-Need-zh.pdf');
   useEffect(()=>{readingState.set(windowId,{zoom,scroll:savedScroll.current});},[windowId,zoom]);
   useEffect(()=>{
@@ -105,6 +106,15 @@ export default function StudyPdf({windowId,url,title,focused}:{windowId:string;u
     const frame=requestAnimationFrame(()=>{if(host.current){host.current.scrollTop=savedScroll.current;onScroll(host.current);}restoringScroll.current=false;});
     return()=>cancelAnimationFrame(frame);
   },[pdf,ratio,width,zoom,focused,supportsFigurePin]);
+  useEffect(()=>{
+    observeApp(windowId,{kind:'pdf',availability:pdf?'content':'loading',title,documentId:url,page:currentPage,scroll:savedScroll.current,editable:false});
+    if(!pdf)return;
+    let current=true;
+    void pdf.getPage(currentPage).then(page=>page.getTextContent()).then(content=>{
+      if(current)observeApp(windowId,{kind:'pdf',availability:pdf?'content':'loading',title,documentId:url,page:currentPage,text:content.items.map(item=>'str' in item?item.str:'').join(' ').slice(0,3200)});
+    }).catch(()=>{});
+    return()=>{current=false;};
+  },[pdf,currentPage,windowId,url,title]);
   const changeZoom=(next:number)=>{
     if(!host.current)return;
     savedScroll.current=host.current.scrollTop*next/zoom;setZoom(next);
@@ -114,6 +124,7 @@ export default function StudyPdf({windowId,url,title,focused}:{windowId:string;u
     const line=element.getBoundingClientRect().top+element.clientHeight*.35;
     for(const page of pages){if(page.getBoundingClientRect().top<=line)visible=Number(page.dataset.page);else break;}
     setCurrentPage(visible);
+    observeApp(windowId,{kind:'pdf',availability:pdf?'content':'loading',title,documentId:url,page:visible,scroll:element.scrollTop,editable:false});
     if(supportsFigurePin){
       const figurePage=element.querySelector<HTMLElement>('.study-pdf-page[data-page="3"]');
       const sectionEndPage=element.querySelector<HTMLElement>('.study-pdf-page[data-page="6"]');

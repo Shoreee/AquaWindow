@@ -1,84 +1,41 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {chromium} from 'playwright-core';
-
-const browser=await chromium.launch({channel:'msedge',headless:true,args:['--disable-gpu']});
+const browser=await chromium.launch({channel:process.env.AW_BROWSER??'chrome',headless:true});
 try{
- const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];
- page.on('pageerror',error=>errors.push(String(error)));
- await page.goto(process.env.AW_URL??'http://127.0.0.1:5176/');
- await page.waitForFunction(()=>!!window.__aw);
- const pdfId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'Attention Is All You Need 中文版.pdf',rect:{x:150,y:80,w:650,h:680},props:{resource:'pdf',taskId:'comparison'}}));
- await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page[data-page="1"] canvas`)?.style.visibility==='visible',pdfId);
- await page.locator(`[data-win="${pdfId}"] .study-pdf-scroll`).evaluate(element=>{element.scrollTop=410});
- const modeMenu=async()=>{await page.locator('.study-mode-trigger').click();return page.locator('.system-drop.study-mode .study-mode-option')};
- await (await modeMenu()).filter({hasText:'融合与拆分'}).click();
- const switchEnvironment=async(label)=>{await page.locator('.study-environment-trigger').click();await page.locator('.system-drop.study-environment .study-mode-option').filter({hasText:label}).click()};
- await switchEnvironment('文件管理');
- assert.equal(await page.locator(`[data-win="${pdfId}"]`).count(),0);
- assert.equal(await (await modeMenu()).count(),2);
- await page.locator('.study-mode-trigger').click();
- await page.locator('.study-task-toggle').click();
- await (await modeMenu()).filter({hasText:'并列呈现'}).click();
- await page.getByRole('button',{name:'任务二'}).click();
- assert.equal(await page.evaluate(()=>window.__aw.ui.get().studyEnvironment),'files');
- assert.match(await page.locator('.study-mode-trigger').innerText(),/并列呈现/);
- assert.equal(await page.getByRole('button',{name:'开始任务'}).isEnabled(),true);
- await page.getByRole('button',{name:'开始任务'}).click();
- await page.locator('.file-study-guide').getByText('请找到开票日期为 2026 年 10 月 12 日、项目为文创打印制作费、价税合计为 326 元的发票样张。').waitFor();
- assert.deepEqual(await page.evaluate(()=>{const guide=window.__aw.kernel.list().find(win=>win.appId==='file-study-guide');return [guide?.rect.x,guide?.rect.y,guide?.rect.w,guide?.rect.h]}),[8,36,1424,142]);
- assert.deepEqual(await page.evaluate(()=>window.__aw.kernel.list().filter(win=>win.appId==='file-study').sort((a,b)=>a.rect.x-b.rect.x).map(win=>win.props.studyDocumentId)),['task2-a','task2-b','task2-c']);
- await page.locator('.study-task-toggle').click();
- await page.getByRole('button',{name:'任务一'}).click();
- const cases=[
-  {task:'任务一',target:'download_8734.pdf'},
-  {task:'任务二',target:'download_6382.png'},
-  {task:'任务三',target:'scan_5721.png'},
- ];
- for(const item of cases){
-  if(item.task!=='任务一')await page.getByRole('button',{name:item.task}).click();
-  for(const mode of ['并列呈现','主次呈现']){
-   if(mode==='主次呈现')await page.getByRole('button',{name:item.task}).click();
-   await (await modeMenu()).filter({hasText:mode}).click();
-   await page.getByRole('button',{name:'开始任务'}).click();
-   assert.equal(await page.locator('[data-win]').filter({has:page.locator('.file-study-guide')}).count(),1);
-   assert.equal(await page.evaluate(()=>window.__aw.kernel.list().filter(win=>win.appId==='file-study').length),mode==='并列呈现'?3:4);
-   if(item.task==='任务三'){
-    assert.equal(await page.locator('.file-study-task3').count(),mode==='并列呈现'?3:4);
-    assert.equal(await page.locator('.file-study-task3.task1-native-compact').count(),mode==='并列呈现'?0:3);
-    assert.equal(await page.locator('.file-study-task3 .study-document-image').count(),mode==='并列呈现'?3:4);
-   }
-   if(mode==='主次呈现'){
-    if(item.task==='任务一'){
-     await page.waitForFunction(()=>document.querySelector('.file-study-document .study-pdf-page canvas')?.style.visibility==='visible');
-     await page.locator('.file-study-document .study-pdf-scroll').evaluate(element=>{element.scrollTop=220});
-    }
-    const secondary=page.locator(item.task==='任务三'?'.task1-native-promote':'.file-study-compact').first();
+ for(const mode of ['parallel','primary-secondary']){
+  const context=await browser.newContext({viewport:{width:1440,height:900}}),page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(String(error)));
+  await page.goto(process.env.AW_URL??'http://localhost:5173/');await page.waitForFunction(()=>!!window.__aw);
+  const pdfId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'原桌面论文',rect:{x:150,y:80,w:650,h:680},props:{resource:'pdf',taskId:'comparison'}}));
+  await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page canvas`)?.style.visibility==='visible',pdfId);
+  await page.locator(`[data-win="${pdfId}"] .study-pdf-scroll`).evaluate(el=>{el.scrollTop=410});
+  await page.getByRole('button',{name:'打开实验',exact:true}).click();await page.getByRole('textbox',{name:'参与者编号'}).fill('P01');
+  await page.locator('.experiment-worlds').getByRole('button',{name:/文件管理/}).click();
+  const orders=[];
+  for(let index=0;index<3;index++){
+   const task=`task${index+1}`;await page.getByText(`第 ${index+1} / 3 题`,{exact:true}).waitFor();
+   await page.getByRole('combobox',{name:'交互方式'}).selectOption('peel');
+   assert.equal(await page.evaluate(()=>window.__aw.ui.get().tech.peel),true);
+   await page.getByRole('combobox',{name:'呈现方式'}).selectOption(mode);await page.getByRole('button',{name:'开始答题',exact:true}).click();
+   await page.waitForFunction(()=>window.__aw.kernel.list().filter(w=>w.appId==='file-study').length===4);
+   orders.push(await page.evaluate(()=>window.__aw.kernel.list().filter(w=>w.appId==='file-study').map(w=>w.props.studyDocumentId)));
+   const target=await page.evaluate(task=>window.__aw.kernel.list().find(w=>w.props.studyDocumentId===`${task}-a`).id,task),root=page.locator(`[data-win="${target}"]`);
+   if(mode==='primary-secondary'){
+    const selector=task==='task3'?'.task1-native-promote':'.file-study-compact',secondary=page.locator(selector).first();
     await secondary.click();
-    await page.waitForFunction(()=>window.__aw.kernel.list().some(win=>win.appId==='file-study'&&win.props.studyDocumentId?.endsWith('-b')&&win.rect.x<window.innerWidth/2));
-    if(item.task==='任务三')await page.locator('[data-win]').filter({hasText:item.target}).locator('.task1-native-promote').click();
-    else await page.locator('.file-study-compact').filter({hasText:item.target}).click();
-    if(item.task==='任务一'){
-     await page.waitForFunction(()=>document.querySelector('.file-study-document .study-pdf-scroll')?.scrollTop>160);
-    }
+    if(await root.locator(selector).count())await root.locator(selector).click();
    }
-   const targetWindow=page.locator('[data-win]').filter({has:page.locator(item.task==='任务三'?'.file-study-task3:not(.task1-native-compact)':'.file-study-document')}).filter({hasText:item.target});
-   await targetWindow.getByRole('button',{name:'选择此文件并提交'}).click();
-   await page.locator('.study-task-toggle').click();
-   await page.getByText('已提交。本轮答案已记录。').waitFor();
+   await root.getByRole('button',{name:'选择此文件并提交',exact:true}).click();await page.getByRole('button',{name:'打开实验',exact:true}).click();
+   await page.locator('.experiment-app').getByRole('status').filter({hasText:'已提交'}).waitFor();await page.getByRole('button',{name:'下一题',exact:true}).click();
   }
+  await page.getByRole('heading',{name:'本轮已完成',exact:true}).waitFor();
+  const results=await page.evaluate(()=>JSON.parse(localStorage.getItem('aquawindow.file-studies.results.v1')));
+  assert.equal(results.length,3);assert.ok(results.every(item=>item.correct&&item.mode===mode&&item.candidateOrder.length===4));
+  const event=page.waitForEvent('download');await page.getByRole('button',{name:'导出记录',exact:true}).click();const download=await event;assert.equal(download.suggestedFilename(),'aquawindow-experiment.json');const output=JSON.parse(await readFile(await download.path(),'utf8'));assert.equal(output.stages.length,3);assert.deepEqual(output.stages.map(stage=>stage.stage),[1,2,3]);assert.ok(output.stages.every(stage=>stage.participant==='P01'&&stage.technique===mode&&!stage.selfReported));
+  await page.locator('[data-win="experiment"]').getByRole('button',{name:'关闭',exact:true}).click();
+  assert.ok(await page.locator(`[data-win="${pdfId}"] .study-pdf-scroll`).evaluate(el=>el.scrollTop)>350);
+  assert.deepEqual(errors,[]);await context.close();
  }
- const results=await page.evaluate(()=>JSON.parse(localStorage.getItem('aquawindow.file-studies.results.v1')));
- assert.equal(results.length,6);
- assert.ok(results.every(result=>result.correct));
- assert.deepEqual(new Set(results.map(result=>result.mode)),new Set(['parallel','primary-secondary']));
- const fileWindows=await page.evaluate(()=>window.__aw.kernel.getState().order);
- await switchEnvironment('论文阅读');
- assert.equal(await page.evaluate(()=>window.__aw.ui.get().studyMode),'fusion');
- assert.ok(await page.evaluate(id=>!!window.__aw.kernel.get(id),pdfId));
- assert.ok(await page.locator(`[data-win="${pdfId}"] .study-pdf-scroll`).evaluate(element=>element.scrollTop)>350);
- await switchEnvironment('文件管理');
- assert.deepEqual(await page.evaluate(()=>window.__aw.kernel.getState().order),fileWindows);
- assert.equal(await (await modeMenu()).count(),2);
- assert.deepEqual(errors,[]);
- console.log('PASS: three tasks in parallel and primary-secondary modes; paper workspace remains independent.');
-}finally{await browser.close()}
+ console.log('PASS: sequential levels in both file layouts, same four candidates, promotion, submissions, export and desktop restoration.');
+}catch(error){const p=browser.contexts().flatMap(c=>c.pages())[0];if(p){console.log(await p.locator('body').innerText());console.log(await p.evaluate(()=>({ui:window.__aw.ui.get(),windows:window.__aw.kernel.list().map(w=>({id:w.id,appId:w.appId,title:w.title,minimized:w.minimized}))})));await p.screenshot({path:'/tmp/aquaw-file-error.png'});}throw error;}finally{await browser.close();}

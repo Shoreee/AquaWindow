@@ -16,7 +16,7 @@ export default function FileStudyGuide({win:_win}:{win:WindowState}){
  return <div className="file-study-guide">
   {study.submitted&&task.id==='task3'?<><h2>已提交</h2><p>本轮答案已记录。请根据研究人员的安排填写量表。</p><button className="chip" onClick={()=>openFileTask(task.id)}>返回实验设置</button></>:<>
   <p>{task.instruction}</p>
-  <p>{study.mode==='primary-secondary'?'点击右侧文件，切换到主窗口查看。':'三份文件可分别查看。'}{task.id==='task2'&&study.mode==='primary-secondary'?'发票默认整张显示，可放大核对细节。':''}在你认定的文件中点击“选择此文件并提交”。</p>
+  <p>{study.mode==='primary-secondary'?'点击右侧文件，切换到主窗口查看。':'分别查看候选文件。'}{task.id==='task2'&&study.mode==='primary-secondary'?'发票默认整张显示，可放大核对细节。':''}在你认定的文件中点击“选择此文件并提交”。</p>
   </>}
  </div>;
 }

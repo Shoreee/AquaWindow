@@ -126,7 +126,7 @@ describe("adaptation transaction and gesture", () => {
     const s=setup();let t=0;const before=s.k.getState();
     const session=new AdaptationSession({kernel:s.k,context:s.context,plans:()=>localPlans(s.context()),request:vi.fn(),feedback:vi.fn(),notify:vi.fn()},()=>t);
     session.press();expect(session.store.get().selectedIds).toEqual([]);t=2500;session.advance();
-    expect(session.store.get().selectedIds).toEqual(before.order.filter(id=>before.windows[id].form==='normal'&&!before.windows[id].minimized));
+    expect(session.store.get().selectedIds).toEqual([]);
     expect(session.store.get().plans).toHaveLength(7);
     expect(session.store.get().index).toBe(0);
     t=10000;session.advance();expect(session.store.get().index).toBe(0);
@@ -175,7 +175,7 @@ describe("adaptation transaction and gesture", () => {
     expect(after.order).toEqual(before.order);
     expect(after.focusedId).toBe(before.focusedId);
   });
-  it("waits at most three extra seconds and never applies a stale response later", () => {
+  it("waits for real model output up to ten seconds without generating a fallback", () => {
     const s = setup();
     let t = 0;
     const notify = vi.fn();
@@ -194,15 +194,33 @@ describe("adaptation transaction and gesture", () => {
     session.press();
     t = 2500;
     session.advance();
-    expect(session.store.get().phase).toBe("waiting");
-    t = 5500;
-    session.advance();
-    expect(session.store.get().phase).toBe("idle");
-    expect(notify).toHaveBeenCalledOnce();
-    plans = s.plans;
-    t = 6000;
-    session.advance();
-    expect(s.k.canUndo()).toBe(false);
+    expect(session.store.get().phase).toBe('waiting');
+    t=9999;session.advance();expect(session.store.get().phase).toBe('waiting');expect(s.k.canUndo()).toBe(false);
+    t=10000;session.advance();expect(session.store.get().phase).toBe('idle');expect(notify).toHaveBeenCalledWith(expect.stringContaining('10 秒'));
+    plans=s.plans;t=11000;session.advance();expect(s.k.canUndo()).toBe(false);
+  });
+
+  it('keeps waiting after release and requires explicit adoption of the returned plan',()=>{
+    const s=setup();let t=0,plans:AgentPlan[]|null=null;
+    const session=new AdaptationSession({kernel:s.k,context:s.context,plans:()=>plans,request:vi.fn(),feedback:vi.fn(),notify:vi.fn(),reducedMotion:()=>true},()=>t);
+    session.press();t=2500;session.advance();session.release();expect(session.store.get().phase).toBe('waiting');
+    plans=s.plans;t=5000;session.advance();expect(session.store.get().phase).toBe('frozen');expect(s.k.canUndo()).toBe(false);
+    session.press();expect(session.store.get().phase).toBe('idle');expect(s.k.lastHistory()?.actor).toBe('agent');
+  });
+  it('does not extend the ten-second limit when selection changes late',()=>{
+    const s=setup();let t=0;const notify=vi.fn(),timeout=vi.fn();
+    const session=new AdaptationSession({kernel:s.k,context:s.context,plans:()=>null,request:vi.fn(),timeout,feedback:vi.fn(),notify},()=>t);
+    session.press();t=9500;session.select(s.note);t=10000;session.advance();
+    expect(session.store.get().phase).toBe('idle');expect(timeout).toHaveBeenCalledOnce();expect(notify).toHaveBeenCalledWith(expect.stringContaining('10 秒'));
+  });
+  it('appends late model suggestions without moving the current preview or accepting them automatically',()=>{
+    const s=setup();let t=0;let incoming:AgentPlan[]|null=null;
+    const session=new AdaptationSession({kernel:s.k,context:s.context,plans:()=>[{...s.plans[1],origin:'local'}],refinements:()=>incoming,request:vi.fn(),feedback:vi.fn(),notify:vi.fn()},()=>t);
+    session.press();t=2500;session.advance();const current=session.store.get().plan,geometry=s.k.getState();
+    incoming=[{...s.plans[0],origin:'deepseek'}];session.refreshCandidates();
+    expect(session.store.get().plan).toEqual(current);expect(session.store.get().index).toBe(0);expect(s.k.getState()).toEqual(geometry);
+    expect(session.store.get().plans).toHaveLength(2);session.refreshCandidates();expect(session.store.get().plans).toHaveLength(2);
+    session.cancel(true);session.refreshCandidates();expect(session.store.get().phase).toBe('idle');
   });
   it("does not resurrect an externally closed target during invalidation", () => {
     const s = setup();
@@ -358,8 +376,8 @@ describe("precomputation buffer", () => {
     t = 1200;
     buffer.tick();
     expect(fetcher).toHaveBeenCalledOnce();
-    buffer.request({ ...s.context(), key: "second" });
-    buffer.request({ ...s.context(), key: "latest" });
+    buffer.request({ ...s.context(), key: "second", semanticKey:"second" });
+    buffer.request({ ...s.context(), key: "latest", semanticKey:"latest" });
     t = 10000;
     buffer.tick();
     expect(fetcher).toHaveBeenCalledOnce();
@@ -408,24 +426,9 @@ describe("precomputation buffer", () => {
     }
     expect(localPlans({ ...ctx, windows: [] })).toEqual([]);
   });
-  it("uses valid local plans and moves windows without any model request by default", () => {
-    const s = setup(), fetcher = vi.fn();
-    const buffer = new CandidateBuffer(fetcher as typeof fetch);
-    const ctx = s.context();
-    buffer.request(ctx, true);
-    buffer.tick();
-    expect(buffer.remoteEnabled).toBe(false);
-    expect(fetcher).not.toHaveBeenCalled();
-    const plans = buffer.get(ctx)!;
-    expect(plans).toHaveLength(7);
-    expect(validatePlans({ plans: localPlans(ctx) }, ctx)).toHaveLength(7);
-    const compiled = compilePlan(s.k.getState(), plans[2], ctx).state;
-    expect(compiled.windows[s.note].rect.x).not.toBe(s.k.get(s.note).rect.x);
-    expect(compiled.windows[s.paper].rect).toEqual(s.k.get(s.paper).rect);
-    for (const window of Object.values(compiled.windows)) {
-      expect(window.rect.x).toBeGreaterThanOrEqual(ctx.work.x);
-      expect(window.rect.x + window.rect.w).toBeLessThanOrEqual(ctx.work.x + ctx.work.w);
-    }
+  it('never manufactures candidates when the model is disabled',()=>{
+    const s=setup(),fetcher=vi.fn(),buffer=new CandidateBuffer(fetcher);
+    buffer.request(s.context(),true);buffer.tick();expect(buffer.get(s.context())).toBeNull();expect(fetcher).not.toHaveBeenCalled();
   });
   it("ignores an in-flight remote response after the user disables DeepSeek", async () => {
     const s = setup(); let t = 0, resolve!: (value: Response) => void;
@@ -441,7 +444,7 @@ describe("precomputation buffer", () => {
     resolve(new Response(JSON.stringify({ plans: s.plans })));
     await new Promise((r) => setTimeout(r, 0));
     expect(buffer.status).toBe("local");
-    expect(buffer.get(s.context())?.[0].id).toBe("local-hole");
+    expect(buffer.get(s.context())).toBeNull();
     buffer.request(s.context(), true);buffer.tick();
     expect(fetcher).toHaveBeenCalledOnce();
   });

@@ -13,7 +13,7 @@ type Point={x:number;y:number};
 const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,value));
 function sourceWindow(){
   const files=ui.get().studyEnvironment==='files';
-  return [...kernel.list()].reverse().find(win=>win.appId===(files?'file-study':'study')&&!win.minimized&&win.form==='normal'&&!!document.querySelector(`[data-win="${CSS.escape(win.id)}"] ${files?'.file-study-document':'.study-pdf-reader'}`));
+  return [...kernel.list()].reverse().find(win=>win.appId===(files?'file-study':'study')&&!win.minimized&&win.form==='normal'&&!!document.querySelector(`[data-win="${CSS.escape(win.id)}"] ${files?':is(.file-study-document,.file-study-task3)':'.study-pdf-reader'}`));
 }
 function capture(rect:{x:number;y:number;w:number;h:number},sourceId:string){
   const root=document.querySelector<HTMLElement>(`[data-win="${CSS.escape(sourceId)}"]`);
@@ -31,7 +31,7 @@ function capture(rect:{x:number;y:number;w:number;h:number},sourceId:string){
     context.drawImage(canvas,(x-box.left)*scaleX,(y-box.top)*scaleY,(right-x)*scaleX,(bottom-y)*scaleY,x-rect.x,y-rect.y,right-x,bottom-y);
     covered=true;
   }
-  const image=root.querySelector<HTMLImageElement>('.file-study-image img');
+  const image=root.querySelector<HTMLImageElement>('.file-study-image img,img.study-document-image');
   if(image?.complete&&image.naturalWidth){
     const box=image.getBoundingClientRect(),x=Math.max(rect.x,box.left),y=Math.max(rect.y,box.top),right=Math.min(rect.x+rect.w,box.right),bottom=Math.min(rect.y+rect.h,box.bottom);
     if(right>x&&bottom>y){const scaleX=image.naturalWidth/box.width,scaleY=image.naturalHeight/box.height;context.drawImage(image,(x-box.left)*scaleX,(y-box.top)*scaleY,(right-x)*scaleX,(bottom-y)*scaleY,x-rect.x,y-rect.y,right-x,bottom-y);covered=true;}
@@ -44,15 +44,13 @@ export function ScreenshotCapture(){
   const [start,setStart]=useState<Point|null>(null),[end,setEnd]=useState<Point|null>(null),[sourceId,setSourceId]=useState<string|null>(null);
   useEffect(()=>{
     const activate=()=>{
-      if(ui.get().studyEnvironment==='files')return;
       const source=sourceWindow();
       if(!source){toast('请先打开论文窗口');return;}
       kernel.focus(source.id);setSourceId(source.id);setStart(null);setEnd(null);
     };
     const key=(event:KeyboardEvent)=>{
-      if(ui.get().studyEnvironment==='files')return;
       if(event.key==='Escape'){setSourceId(null);return;}
-      if(event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.repeat&&event.key.toLowerCase()==='s'){
+      if(event.shiftKey&&event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.repeat&&event.key.toLowerCase()==='s'){
         const target=event.target as HTMLElement|null;
         if(target?.isContentEditable||target?.closest('input,textarea,select,[contenteditable="true"]'))return;
         event.preventDefault();activate();
@@ -77,7 +75,7 @@ export function ScreenshotCapture(){
       const source=kernel.get(sourceId);if(!source)return;
       const file=ui.get().studyEnvironment==='files';
       const item=file?saveFileCapture(blob,fileTaskStore.get().current,sourceId):saveGalleryCapture(blob,(source.props.taskId as StudyTaskId|undefined)??studyTaskStore.get().current,sourceId);
-      if(ui.get().studyMode!=='screenshot'){toast('截图已保存到图库，可从 Dock 打开查看');return;}
+      if(ui.get().experimentOpen&&ui.get().studyMode!=='screenshot'){toast('已保存到图库');return;}
       const bounds=workArea(),w=Math.min(390,Math.max(240,selection.w+32)),h=Math.min(430,Math.max(180,selection.h*w/selection.w+64));
       const gap=4;
       let right=source.rect.x+source.rect.w+gap,rightWidth=bounds.x+bounds.w-right;
@@ -99,7 +97,7 @@ export function ScreenshotCapture(){
       window.setTimeout(()=>{
         motion.finish();
         const connect=()=>{
-          if(ui.get().studyMode!=='screenshot'||!kernel.get(id)||!kernel.get(sourceId))return;
+          if((ui.get().experimentOpen&&ui.get().studyMode!=='screenshot')||!kernel.get(id)||!kernel.get(sourceId))return;
           if(manualWindowMotionActive()){requestAnimationFrame(connect);return;}
           fuseSurfaces(id,sourceId);
         };

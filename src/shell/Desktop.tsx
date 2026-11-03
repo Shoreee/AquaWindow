@@ -10,10 +10,10 @@ import { ResearcherConsole, ScenarioPanel } from './Panels';
 import { ProposalLayer } from './ProposalLayer';
 import { RecursiveDesktop } from './RecursiveDesktop';
 import { Window } from './Window';
-import { SystemDock, SystemMenuBar } from './SystemChrome';
+import { SystemDock } from './SystemChrome';
 import { AgentScene } from './AgentScene';
 import { startAdaptiveRuntime } from '../agent/adaptive/runtime';
-import {TaskCard} from '../study/TaskCard';
+
 import {ScreenshotCapture} from '../study/ScreenshotCapture';
 
 const development = import.meta.env.DEV && new URLSearchParams(location.search).get('dev') === '1';
@@ -121,7 +121,8 @@ export function Desktop() {
       </div>
       <FieldLayer shapes={shapes} />
       <div className="windows" onPointerDownCapture={() => !ui.get().scenarioCollapsed && ui.get().scenarioId && ui.set({ scenarioCollapsed: true })}>
-        {order.map((id) => {
+        {/* Focus changes z-index, never reparents a control between pointerdown and click. */}
+        {Object.keys(state.windows).filter(id=>!!visuals[id]).map((id) => {
           const w = state.windows[id];
           return (
             <Window
@@ -140,8 +141,8 @@ export function Desktop() {
       <FusionLayer state={state}/>
       {snap && <div className="snap-preview" style={{ left: snap.x, top: snap.y, width: snap.w, height: snap.h }} />}
       {xray && <div className="xray-hint">X-ray — front layers are see-through · release Space</div>}
-      {development ? <><ProposalLayer /><ScenarioPanel /><MenuBar /><ControlCenter /><Dock /></> : <><SystemMenuBar /><SystemDock /></>}
-      {!development && <TaskCard />}
+      {development ? <><ProposalLayer /><ScenarioPanel /><MenuBar /><ControlCenter /><Dock /></> : <><SystemDock /></>}
+
       {!development && <ScreenshotCapture />}
       <Toasts />
       <MissionControl />

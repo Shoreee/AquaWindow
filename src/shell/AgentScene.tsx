@@ -4,12 +4,12 @@ import {manualCursorDragActive} from "../agent/adaptive/manualMotion";
 import { memo, useEffect, useRef, useState } from "react";
 import type { AgentMotion } from "../agent/adaptive/choreography";
 import { PRIMITIVE_LABELS, type AgentView, type Primitive } from "../agent/adaptive/types";
-const gestures: Record<Primitive, number> = { arrange: 1, anchor: 2, peel: 3, yield: 4, encapsulate: 5, branch: 6, merge: 7, permeate: 8 };
+const gestures: Record<Primitive, number> = { fuse:1,'corner-peel':3,region:3,arrange: 1, anchor: 2, peel: 3, yield: 4, encapsulate: 5, branch: 6, merge: 7, permeate: 8 };
 import { adaptation, pointer, serviceStore } from "../agent/adaptive/runtime";
 import { statusMessages } from "../agent/adaptive/buffer";
 import { useStore } from "../system/createStore";
 import { kernel } from "../system/kernel";
-import { ui } from "../system/ui";
+
 import {surfaceUi} from './surfaceFusion';
 import {allSurfaceBonds,seamGeometry} from './surfaceBondGeometry';
 import {visualRect} from '../techniques/depth';
@@ -137,8 +137,8 @@ function AgentSceneImpl() {
       if (slow > 24) quality = 1;
       const s = adaptation.store.get(),manual=materialActivity.get(),surface=surfaceUi.get(),surfaceVisual=!!(surface.split||surface.push),
         active = (s.phase !== "idle"&&s.phase!=="returning"),
-        dragCursor = !ui.get().agentEnabled && manualCursorDragActive();
-      const customCursor=ui.get().agentEnabled||dragCursor||surfaceVisual;
+        dragCursor = manualCursorDragActive();
+      const customCursor=matchMedia('(pointer: fine)').matches;
       document.documentElement.classList.toggle("agent-cursor-enabled",customCursor);
       if(!customCursor&&!manual.active&&!active&&!couplings.size){
         if(front.current)front.current.style.visibility='hidden';
@@ -148,7 +148,7 @@ function AgentSceneImpl() {
       }
       if(front.current)front.current.style.visibility='visible';
       const returningAge = Math.max(0, ...[...couplings.values()].map((c) => c.age * c.fade));
-      const target = active ? activationAt(now - s.startedAt) : dragCursor||surfaceVisual ? 1 : smooth(returningAge / .65);
+      const target = active ? activationAt(now - s.startedAt) : s.phase==="returning" ? smooth(returningAge / .65) : 0;
       // A critically damped spring changes the SAME vertices in both directions.
       for (let step = 0; step < 4; step++) {
         const h = dt / 4;
@@ -157,7 +157,7 @@ function AgentSceneImpl() {
       }
       morph = Math.max(0, Math.min(1, morph));
       const charging = active ? smooth((now - s.startedAt - 420) / 2080) : 0;
-      const goalEnergy = dragCursor||surfaceVisual ? .7 : active
+      const goalEnergy = active
         ? s.phase === "frozen"
           ? 0.6
           : 0.35 + charging * 0.75
@@ -557,7 +557,7 @@ function AgentSceneImpl() {
         roots: [...roots],
         transport,
         core: !surfaceVisual && shown && (morph > .001 || pointer.kind === "arrow"),
-        extraCores:surfaceCores,
+        extraCores:active?surfaceCores:[],
         links,
       };
       if (import.meta.env.DEV && front.current)
@@ -604,21 +604,21 @@ function AgentSceneImpl() {
   const text =
     session.phase==='applying'?'已接受，正在完成 · Esc 撤回':session.phase==='returning'?'正在收回 · 撤回方案':
     session.performing && session.operation
-      ? `${PRIMITIVE_LABELS[session.operation as Primitive]} · ← → 切换，松开空格采用`
+      ? `${PRIMITIVE_LABELS[session.operation as Primitive]} · ← → 切换，${session.phase==='frozen'?'空格采用':'松开空格采用'}`
       : session.phase === "charging"
-      ? "继续按住，让思绪展开"
+      ? "正在自适应布局"
       : session.phase === "hatching"
         ? session.selectedIds.length
           ? `已连接 ${session.selectedIds.length} 个窗口`
-          : "点选窗口指定对象 · 未点选则超时全选"
+          : "点选窗口指定对象"
         : session.phase === "waiting"
           ? status === "thinking"
-            ? "正在更新这一刻的方案…"
+            ? "正在自适应布局"
             : statusMessages[status]
           : session.phase === "cycling"
-            ? `方案 ${session.index + 1}/${session.plans.length} · ← → 切换，松开采用`
+            ? `DeepSeek 建议 · ← → 切换，松开采用`
             : session.phase === "frozen"
-              ? "松开采用 · Esc 撤回"
+              ? "空格采用 · Esc 撤回"
               : "";
   const operations = session.plan ? [...new Set(session.plan.steps.map(step=>step.type))].filter(step=>step!=='anchor') : [];
   return (
@@ -629,7 +629,7 @@ function AgentSceneImpl() {
         ref={front}
         aria-hidden="true"
       />
-        {session.phase==='cycling'&&<div className="agent-candidate-tabs">{session.plans.map((plan,index)=><button key={plan.id} className={index===session.index?'selected':''} onPointerDown={e=>e.stopPropagation()} onClick={()=>adaptation.navigate(index-session.index)}>{index+1} {plan.title}</button>)}</div>}
+        {['cycling','frozen'].includes(session.phase)&&<div className="agent-candidate-tabs">{session.plans.map((plan,index)=><button key={`${plan.origin??'legacy'}:${plan.id}`} className={index===session.index?'selected':''} onPointerDown={e=>e.stopPropagation()} onClick={()=>adaptation.navigate(index-session.index)}>{plan.origin==='deepseek'?'DeepSeek · ':plan.origin==='local'?'本地 · ':''}{plan.title}</button>)}</div>}
       <div className="iridescent-cursor" ref={cursor} aria-hidden="true">
         <svg width="28" height="32" viewBox="0 0 28 32">
           <defs>
@@ -655,28 +655,8 @@ function AgentSceneImpl() {
             stroke="url(#cursor-pearl)"
             strokeWidth="1.5"
           />
-          <path
-            className="cursor-ibeam"
-            d="M5 2H15M10 2V24M5 24H15"
-            fill="none"
-            stroke="url(#cursor-pearl)"
-            strokeWidth="2.8"
-          />
-          <path
-            className="cursor-resize"
-            d="M2 14H25M2 14L7 9M2 14L7 19M25 14L20 9M25 14L20 19"
-            fill="none"
-            stroke="url(#cursor-pearl)"
-            strokeWidth="2.5"
-          />
-          <path
-            className="cursor-hand"
-            d="M9 27C6 23 2 18 3 16C5 13 8 19 9 18V5C9 1 13 1 13 5V13C13 10 17 10 17 14C18 11 21 12 21 16C24 14 26 17 25 21L23 28Z"
-            fill="#fff"
-            stroke="url(#cursor-pearl)"
-            strokeWidth="1.5"
-          />
         </svg>
+        {Object.entries({text:'xterm',pointer:'hand2',ew:'sb_h_double_arrow',ns:'sb_v_double_arrow',nwse:'bd_double_arrow',nesw:'fd_double_arrow'}).map(([kind,file])=><img className="cursor-asset" data-kind={kind} key={kind} src={`${import.meta.env.BASE_URL}cursors/${file}.svg`} alt=""/>)}
       </div>
       {fallback && session.phase !== "idle" && (
         <div

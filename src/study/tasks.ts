@@ -19,9 +19,9 @@ export const studyTasks: Record<StudyTaskId, {
   qaExample?: StudyAnswerExample;
 }> = {
   comparison: {
-    label: '任务 01 · 内容对照',
-    switchLabel: '任务 01',
-    title: '阅读 Attention Is All You Need 中文版',
+    label: '图文对照',
+    switchLabel: '图文对照',
+    title: '图文对照',
     description: '请完成两组内容对照：',
     steps: ['第 3 节的模型架构说明与图 1 Transformer 架构图。', '第 4 节提到的附录注意力可视化与附录图 3。'],
     resources: [
@@ -33,16 +33,16 @@ export const studyTasks: Record<StudyTaskId, {
     ],
   },
   screenshot: {
-    label: '任务 02 · 截图转移',
-    switchLabel: '任务 02',
+    label: '截图转移',
+    switchLabel: '截图转移',
     title: '截图转移',
     description: '目标图像是《Attention Is All You Need》中文版第 3 页的图 1：Transformer 模型架构图。',
     steps: ['从“文件”打开中文版论文，找到图 1。', '截取该图，粘贴或拖入 AI 问答窗口，再切回论文原来的阅读位置。'],
     resources: [attentionZh],
   },
   bilingual: {
-    label: '任务 03 · 临时中英对照',
-    switchLabel: '任务 03',
+    label: '中英对照',
+    switchLabel: '中英对照',
     title: '临时中英对照',
     description: '阅读中文版论文时，遇到表达不清的地方，临时查看英文原文，再回到刚才的中文阅读位置。',
     steps: ['从“文件”打开中文版和英文版论文。', '在两个窗口之间切换或并排对照，保持各自的阅读位置。'],
@@ -52,16 +52,16 @@ export const studyTasks: Record<StudyTaskId, {
     ],
   },
   external: {
-    label: '任务 04 · 外部材料与返回',
-    switchLabel: '任务 04',
+    label: '外部材料',
+    switchLabel: '外部材料',
     title: '打开外部材料并返回',
     description: '阅读《Attention Is All You Need》时，在浏览器中查找 Google Research 的 Transformer 介绍文章和该论文的 arXiv 页面，浏览后回到原来的阅读位置。',
     steps: ['从“文件”打开中文版论文，移动到需要查看外部材料的页面。', '从 Dock 打开“浏览器”，自行搜索 Transformer: A Novel Neural Network Architecture for Language Understanding 和 Attention Is All You Need arXiv。', '通过普通窗口切换回论文，继续刚才的页码和页内位置。'],
     resources: [attentionZh],
   },
   citation: {
-    label: '任务 05 · 返回引用来源',
-    switchLabel: '任务 05',
+    label: '引用来源',
+    switchLabel: '引用来源',
     title: '返回引用来源',
     description: '从《Attention Is All You Need》查找并阅读引用文献，再通过普通窗口切换回主论文原来的位置。',
     steps: ['从“文件”打开中文版论文，在第 3.2 节找到加性注意力相关的引用 [2]，并在参考文献中确认其篇名。', '在“文件”中自行找到 Neural Machine Translation by Jointly Learning to Align and Translate。', '打开引用论文阅读后，通过普通窗口切换回主论文，继续原来的页码与页内位置。'],
@@ -71,8 +71,8 @@ export const studyTasks: Record<StudyTaskId, {
     ],
   },
   answer: {
-    label: '任务 06 · AI 回答与原文',
-    switchLabel: '任务 06',
+    label: '回答核对',
+    switchLabel: '回答核对',
     title: 'AI 回答与原文逐句对应',
     description: '对照 AI 问答窗口中的实验示例回答，逐句找到《Attention Is All You Need》中文版原文中的依据。',
     steps: ['从“文件”打开中文版论文，再从 Dock 打开“AI 问答”。', '逐句核对示例回答与论文原文；可在“笔记”记录对应位置或存疑之处。', '在两个窗口之间切换时，保持原文阅读位置。'],
@@ -95,6 +95,6 @@ export const studyTaskStore = createStore<{ current: StudyTaskId }>({ current: '
 
 export function switchStudyTask(next: StudyTaskId) {
   if (studyTaskStore.get().current === next) return;
-  kernel.closeAll();
+  for(const win of kernel.list())if(win.appId!=='experiment')kernel.close(win.id,'system');
   studyTaskStore.set({ current: next });
 }

@@ -41,6 +41,7 @@ interface Segment {
   after: KernelState;
 }
 const timing: Record<Primitive, [number, number]> = {
+  fuse:[.35,.7],'corner-peel':[0,.65],region:[0,.4],
   arrange: [.85, 2.15], anchor: [0, 0], peel: [.6, 1.75],
   yield: [.6, 1.6], encapsulate: [.38, 1.8], branch: [.85, 2.25],
   merge: [.85, 2.25], permeate: [.6, 1.35],
@@ -107,7 +108,7 @@ export class PlanPerformance {
     // Translation is a carrier lane: combine it with the next body operation.
     // The side operation retains its own geometry and semantics while the carrier moves.
     const movement=this.segments.find(s=>s.primitive==='arrange');
-    const activity=movement?this.segments.find(s=>s.start>movement.start && s.targets.some(id=>movement.targets.includes(id))):undefined;
+    const activity=movement?this.segments.find(s=>s.start>movement.start && !['fuse','corner-peel','region'].includes(s.primitive) && s.targets.some(id=>movement.targets.includes(id))):undefined;
     if(movement && activity){
       const geometry=movement.after;
       movement.concurrent=activity.primitive;
@@ -122,7 +123,7 @@ export class PlanPerformance {
     }
     this.final = compilePlan(base, plan, context).state;
     const geometryChanged=Object.keys(origin.windows).length!==Object.keys(this.final.windows).length||Object.entries(origin.windows).some(([id,w])=>{
-      const to=this.final.windows[id];return !to||JSON.stringify(w.rect)!==JSON.stringify(to.rect)||w.depth!==to.depth||w.form!==to.form||w.minimized!==to.minimized||!!(w.props.agentView as {revealed?:boolean}|undefined)?.revealed!==!!(to.props.agentView as {revealed?:boolean}|undefined)?.revealed;
+      const to=this.final.windows[id];return !to||JSON.stringify(w.rect)!==JSON.stringify(to.rect)||w.depth!==to.depth||w.form!==to.form||w.minimized!==to.minimized||w.group!==to.group||JSON.stringify(w.importance)!==JSON.stringify(to.importance)||JSON.stringify(w.props.agentCornerFold)!==JSON.stringify(to.props.agentCornerFold)||!!(w.props.agentView as {revealed?:boolean}|undefined)?.revealed!==!!(to.props.agentView as {revealed?:boolean}|undefined)?.revealed;
     });
     if(!this.segments.length && geometryChanged){
       const targets=[...new Set([...Object.keys(origin.windows),...Object.keys(this.final.windows)])];
@@ -211,8 +212,9 @@ export class PlanPerformance {
       // Minimize / replace the content only after the wrapping organism has closed its shell.
       const unwrapping=old.form==='capsule'&&next.form!=='capsule';
       windows[id] = { ...old, rect, ...(unwrapping?{form:'normal' as const}:{}), ...(old.minimized&&!next.minimized?{minimized:false}:{}), depth: old.depth + (next.depth - old.depth) * action,
-        ...(action >= 1 ? { form:next.form,capsuleRect:queue&&capsule&&next.form==='capsule'?{x:capsule.x+capsule.w-receiverSize.w,y:capsule.y,w:receiverSize.w,h:receiverSize.h}:next.capsuleRect,minimized:next.minimized } : {}),
+        ...(action >= 1 ? { group:next.group,importance:next.importance,form:next.form,capsuleRect:queue&&capsule&&next.form==='capsule'?{x:capsule.x+capsule.w-receiverSize.w,y:capsule.y,w:receiverSize.w,h:receiverSize.h}:next.capsuleRect,minimized:next.minimized } : {}),
         props: { ...(itemAge >= segment.travel ? next.props : old.props), agentMotion: motion,
+          ...((old.props.agentCornerFold||next.props.agentCornerFold)?{agentCornerFold:next.props.agentCornerFold?{...(next.props.agentCornerFold as object),amount:Number((old.props.agentCornerFold as {amount?:number}|undefined)?.amount??0)+(Number((next.props.agentCornerFold as {amount:number}).amount)-Number((old.props.agentCornerFold as {amount?:number}|undefined)?.amount??0))*action}:action<1?{...(old.props.agentCornerFold as object),amount:Number((old.props.agentCornerFold as {amount:number}).amount)*(1-action)}:undefined}:{}),
           ...(unwrapping||hiddenContainer?{agentReentry:{amount:action,source:unwrapping?old.props.agentCapsule:undefined,rect:from}}:{}),
           ...(keepOldReveal?{agentView:old.props.agentView,agentRevealProgress:revealExit}: {agentRevealProgress:undefined}),
           ...(queue?{agentQueue:{index:queueIndex,total:segment.targets.length,amount:action,travel:travelProgress,waiting:itemAge<segment.travel,mergedCount,incoming,fill:count}}:{}), ...(born||absorbed?{agentDivision:{born,absorbed,amount:action,sourceVisibility:born?1:previousOpacity}}:{}),

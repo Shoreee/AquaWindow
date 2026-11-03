@@ -3,21 +3,21 @@ import type {KernelState,WindowState} from '../kernel/types';
 import {useStore} from '../system/createStore';
 import {stackingOrder} from '../techniques/visuals';
 import {visualRect} from '../techniques/depth';
-import {LivingRim} from './LivingRim';
-import {livingWave} from './livingGeometry';
+import {openingFront,seamPath} from './seamShape';
+import {kernel} from '../system/kernel';
 import {allSurfaceBonds,fusionPlacement,seamGeometry,type SurfaceBond} from './surfaceBondGeometry';
 import {beginSurfaceSplit,surfaceUi} from './surfaceFusion';
 import {ease} from '../agent/adaptive/choreography';
 import {anticipationPair,anticipationPath} from './fusionAnticipation';
 function FusionAnticipation({state,candidate}:{state:KernelState;candidate:{a:string;b:string}}){
  const a=useRef<SVGGElement>(null),b=useRef<SVGGElement>(null),latest=useRef({state,candidate});latest.current={state,candidate};
- useEffect(()=>{let raf=0;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const draw=(now:number)=>{const pair=anticipationPair(latest.current.state,latest.current.candidate);
-   if(pair)for(const [ref,w,first] of [[a,pair.a,pair.first],[b,pair.b,!pair.first]] as const){const d=anticipationPath(w,pair.axis,first,reduced?0:now/1000);ref.current?.querySelectorAll('[data-living-path]').forEach(node=>node.setAttribute('d',d));}
+ useEffect(()=>{let raf=0;
+  const draw=()=>{const pair=anticipationPair(latest.current.state,latest.current.candidate);
+   if(pair)for(const [ref,w,first] of [[a,pair.a,pair.first],[b,pair.b,!pair.first]] as const){const d=anticipationPath(w,pair.axis,first);ref.current?.querySelectorAll('[data-living-path]').forEach(node=>node.setAttribute('d',d));}
    raf=requestAnimationFrame(draw);
   };raf=requestAnimationFrame(draw);return()=>cancelAnimationFrame(raf);
  },[]);
- return <g className="surface-fusion-anticipation" pointerEvents="none"><LivingRim ref={a} path=""/><LivingRim ref={b} path=""/></g>;
+ return <g className="surface-fusion-anticipation" pointerEvents="none"><g ref={a}><path data-living-path className="surface-seam-line"/></g><g ref={b}><path data-living-path className="surface-seam-line"/></g></g>;
 }
 function SurfaceSeam({bond,a,b,state}:{bond:SurfaceBond;a:WindowState;b:WindowState;state:KernelState}){
  const split=useStore(surfaceUi,s=>s.split?.id===bond.id?s.split:null),latest=useRef({bond,a,b,split,state});latest.current={bond,a,b,split,state};
@@ -28,18 +28,16 @@ function SurfaceSeam({bond,a,b,state}:{bond:SurfaceBond;a:WindowState;b:WindowSt
  const seam=seamGeometry(visualRect(a,state.screen),visualRect(b,state.screen),bond.axis);
  useEffect(()=>{
   let raf=0;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const draw=(now:number)=>{const c=latest.current,g=seamGeometry(visualRect(c.a,c.state.screen),visualRect(c.b,c.state.screen),c.bond.axis),p=c.split?.progress??0;
-   const action=Math.max(Number((c.a.props.agentMotion as {action?:number}|undefined)?.action??1),Number((c.b.props.agentMotion as {action?:number}|undefined)?.action??1)),birth=c.bond.createdAt===0?ease(action):ease((now-c.bond.createdAt)/780),start=Math.max(c.split?.fromEnd?0:p,(1-birth)/2),end=Math.min(c.split?.fromEnd?1-p:1,(1+birth)/2);
-   const point=(normal:number,t:number)=>g.axis==='x'?{x:normal,y:g.lo+g.length*t}:{x:g.lo+g.length*t,y:normal};
-   const wave=(t:number)=>livingWave(t*g.length,reduced?0:now/1000);
-   const path=end-start>.002?Array.from({length:65},(_,i)=>{const t=start+(end-start)*i/64,q=point((g.first+g.second)/2+wave(t)*.42,t);return `${i?'L':'M'}${q.x.toFixed(2)} ${q.y.toFixed(2)}`;}).join(''):'';
-   rim.current?.querySelectorAll('[data-living-path]').forEach(node=>node.setAttribute('d',path));
-   for(const [ref,n] of [[freeA,g.first],[freeB,g.second]] as const){
-    const lo=c.split?.fromEnd?1-p:0,hi=c.split?.fromEnd?1:p;
-    const d=p>.001?Array.from({length:40},(_,i)=>{const t=lo+(hi-lo)*i/39,q=point(n+(ref===freeA?1:-1)*wave(t)*.22,t);return `${i?'L':'M'}${q.x.toFixed(2)} ${q.y.toFixed(2)}`;}).join(''):'';
-    ref.current?.querySelectorAll('[data-living-path]').forEach(node=>node.setAttribute('d',d));
-   }
-   if(root.current)root.current.style.opacity=String(g.length<35?0:1-ease((p-.97)/.03));
+  const write=(ref:typeof rim,path:string)=>ref.current?.querySelectorAll('[data-living-path]').forEach(node=>node.setAttribute('d',path));
+  const draw=(now:number)=>{
+   const c=latest.current,state=kernel.getState(),a=state.windows[c.bond.a],b=state.windows[c.bond.b];if(!a||!b)return;
+   const g=seamGeometry(visualRect(a,state.screen),visualRect(b,state.screen),c.bond.axis),current=surfaceUi.get().split,s=current?.id===c.bond.id?current:null,p=s?.progress??0,time=reduced?0:now/1000;
+   const action=Math.max(Number((a.props.agentMotion as {action?:number}|undefined)?.action??1),Number((b.props.agentMotion as {action?:number}|undefined)?.action??1)),birth=c.bond.createdAt===0?ease(action):ease((now-c.bond.createdAt)/780);
+   const {position,width}=openingFront(p,g.length),opened=Math.max(0,Math.min(1,position+width)),boundary=s?.fromEnd?1-opened:opened;
+   write(rim,seamPath(g,null,s?.fromEnd?0:boundary,s?.fromEnd?boundary:1,time,s));
+   write(freeA,s?seamPath(g,true,s.fromEnd?boundary:0,s.fromEnd?1:boundary,time,s):'');
+   write(freeB,s?seamPath(g,false,s.fromEnd?boundary:0,s.fromEnd?1:boundary,time,s):'');
+   if(root.current)root.current.style.opacity=String(g.length<35?0:birth*(1-(s?.release??0)));
    raf=requestAnimationFrame(draw);
   };raf=requestAnimationFrame(draw);return()=>cancelAnimationFrame(raf);
  },[]);
@@ -47,13 +45,13 @@ function SurfaceSeam({bond,a,b,state}:{bond:SurfaceBond;a:WindowState;b:WindowSt
  const mid=(seam.first+seam.second)/2,vertical=seam.axis==='x';
  return <g ref={root} clipPath={`url(#seam-${clipId})`} data-surface-bond={bond.id} data-surface-progress={split?.progress??0} className={`surface-seam ${split?'separating':''}`}>
   <defs><clipPath id={`seam-${clipId}`}><path d={visiblePath} clipRule="evenodd"/></clipPath></defs>
-  <LivingRim ref={rim} path=""/><LivingRim ref={freeA} path=""/><LivingRim ref={freeB} path=""/>
-  <rect className="surface-seam-hit" x={vertical?mid-14:seam.lo} y={vertical?seam.lo:mid-14} width={vertical?28:seam.length} height={vertical?seam.length:28} fill="transparent" role="button" tabIndex={0}
-   aria-label="沿接缝从一端拉到底以分开窗口" onPointerDown={e=>beginSurfaceSplit(bond,e.nativeEvent)}
+  <g ref={rim}><path data-living-path className="surface-seam-line"/></g><g ref={freeA}><path data-living-path className="surface-seam-line"/></g><g ref={freeB}><path data-living-path className="surface-seam-line"/></g>
+  <rect className="surface-seam-hit" x={vertical?mid-18:seam.lo-12} y={vertical?seam.lo-12:mid-18} width={vertical?36:seam.length+24} height={vertical?seam.length+24:36} fill="transparent" role="button" tabIndex={0}
+   aria-label="从接缝端点沿接缝拉开窗口" onPointerDown={e=>{e.preventDefault();e.stopPropagation();beginSurfaceSplit(bond,e.nativeEvent);}}
    onKeyDown={e=>{if(e.key==='End'){e.preventDefault();beginSurfaceSplit(bond,new PointerEvent('pointerdown',{button:0,clientX:vertical?mid:seam.lo,clientY:vertical?seam.lo:mid}))?.complete();}}}>
-   <title>沿接缝从一端拉到底分开；中途松手回融 · End 完整分开 · Esc 取消</title>
+   <title>从端点沿接缝拉到底分开 · 中途松手回合 · End 分开 · Esc 取消</title>
   </rect>
-  <g className="surface-seam-hint" transform={`translate(${vertical?mid+13:seam.lo+8} ${vertical?seam.lo+12:mid-17})`} pointerEvents="none"><rect x="0" y="-14" width="148" height="25" rx="12"/><text x="9" y="3">{split?`拉到底分开 · ${Math.round(split.progress*100)}%`:'沿接缝拉到底分开'}</text></g>
+
  </g>;
 }
 export function FusionLayer({state}:{state:KernelState}){

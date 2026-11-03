@@ -1,3 +1,5 @@
+import {appObservation} from './observations';
+import {studyDocument} from '../../apps/data/studies';
 import { AGENT_FILES, FS } from "../../apps/data/fs";
 import { paperById } from "../../apps/data/papers";
 import {
@@ -24,19 +26,12 @@ export function makeContext(
   feedback: AgentContext["feedback"],
 ): AgentContext {
   const sources: Source[] = [];
-  const focused = state.windows[state.focusedId ?? ""];
-  const chosen = selectedIds.map((id) => state.windows[id]).filter(Boolean);
-  const task = (
-    chosen.length
-      ? chosen.every((w) => w.appId === "finder" || w.appId === "code")
-      : focused?.appId === "finder" || focused?.appId === "code"
-  )
-    ? "files"
-    : "papers";
+  // Task intent is inferred from observed evidence, never assigned by app-name heuristics.
+  const task='workspace' as const;
   let remaining = 11000;
   const windows = state.order
     .map((id) => state.windows[id])
-    .filter((w) => !w.minimized && !w.props.agentCapsule)
+    .filter((w) => w&&!w.minimized && !w.props.agentCapsule&&w.appId!=='experiment'&&w.role!=='system')
     .slice(-8)
     .map((w) => {
       const local: Source[] = [];
@@ -95,6 +90,12 @@ export function makeContext(
           });
         }
       }
+      const observation=appObservation(w.id);
+      if(observation?.text)local.push({id:`${w.id}:observed`,windowId:w.id,title:observation.title||w.title,text:observation.text,kind:observation.editable?'note':observation.kind==='web'?'web':observation.kind==='image'?'image':observation.kind==='pdf'?'paper':'ui'});
+      if(w.appId==='file-study'){
+        const doc=studyDocument(String(w.props.studyDocumentId));
+        if(doc)local.push({id:`${w.id}:document`,windowId:w.id,title:doc.file,text:[doc.abstract,...doc.paragraphs].join('\n').slice(0,2400),kind:'file'});
+      }
       for (const s of local) {
         s.text = s.text.slice(0, Math.max(0, remaining));
         remaining -= s.text.length + s.title.length;
@@ -108,16 +109,20 @@ export function makeContext(
         rect: w.rect,
         depth: w.depth,
         focused: state.focusedId === w.id,
+        group:w.group,fold:w.props.agentCornerFold as import('./types').FoldSpec|undefined,
+        content:observation?{...observation,text:undefined,scroll:undefined}:undefined,
+        regions:w.importance.filter(r=>r.id.startsWith('marked:')),
+        capabilities:w.form==='normal'?['arrange','fuse','corner-peel','encapsulate','permeate',...(w.importance.some(r=>r.id.startsWith('marked:'))?['region']:[])]:[],
         sourceIds: local.filter((s) => sources.includes(s)).map((s) => s.id),
-        selection: String(w.props.selected ?? w.props.query ?? ""),
-        scroll: readingProgress.get(w.id) ?? 0,
+        selection: String(observation?.selection ?? w.props.selected ?? w.props.query ?? ""),
+        scroll: observation?.scroll ?? readingProgress.get(w.id) ?? 0,
       };
     });
   const semanticKey = hash({
     task,
     windows: [...windows]
       .sort((a, b) => a.id.localeCompare(b.id))
-      .map((w) => [w.id, w.sourceIds, w.selection]),
+      .map((w) => [w.id,w.app,w.title,w.group,w.fold,w.content,w.regions,w.capabilities,w.sourceIds,w.selection]),
     sources: [...sources].sort((a, b) => a.id.localeCompare(b.id)),
     feedback,
     behaviour: events

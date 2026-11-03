@@ -21,6 +21,8 @@ export type WindowForm = 'normal' | 'capsule';
  * Coordinates are normalised (0..1) to the window's content box.
  */
 export interface ImportanceRegion {
+  /** Explicit user cutout; other regions preserve content beneath overlapping windows. */
+  kind?: 'hole';
   id: string;
   x: number;
   y: number;

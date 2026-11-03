@@ -87,8 +87,19 @@ export function validatePlans(value: unknown, ctx: AgentContext): AgentPlan[] {
       let valid = false;
       switch (s.type) {
         case "arrange":
-          valid = s.layout === "compare" || s.layout === "focus";
+          valid = (s.layout === "compare" || s.layout === "focus")
+            &&(s.axis===undefined||s.axis==='x'||s.axis==='y')
+            &&(s.order===undefined||ids(s.order,new Set(s.targets as string[]),(s.targets as string[]).length,(s.targets as string[]).length))
+            &&(s.weights===undefined||Array.isArray(s.weights)&&s.weights.length===(s.targets as string[]).length&&s.weights.every(w=>fraction(w,.05,20)))
+            &&(s.anchorId===undefined||typeof s.anchorId==='string'&&(s.targets as string[]).includes(s.anchorId))
+            &&(s.share===undefined||fraction(s.share,.3,.8));
           break;
+        case 'fuse':
+          valid=(s.targets as string[]).length===2&&typeof s.movingId==='string'&&typeof s.fixedId==='string'&&s.movingId!==s.fixedId&&(s.targets as string[]).includes(s.movingId)&&(s.targets as string[]).includes(s.fixedId);break;
+        case 'corner-peel':
+          valid=(s.targets as string[]).length===1&&['top-left','top-right','bottom-left','bottom-right'].includes(String(s.corner))&&fraction(s.amount,.08,.4);break;
+        case 'region':
+          valid=(s.targets as string[]).length===1&&(s.mode==='preserve'||s.mode==='hole')&&str(s.regionId,100)&&!!ctx.windows.find(w=>w.id===(s.targets as string[])[0])?.regions?.some(r=>r.id===s.regionId);break;
         case "anchor":
           valid = edge(s.edge) && ids(s.artifactIds, artifactIds);
           break;
@@ -170,4 +181,23 @@ export function validatePlans(value: unknown, ctx: AgentContext): AgentPlan[] {
     });
   }
   return result.sort((a, b) => b.priority - a.priority);
+}
+
+export interface PlanRejection {id:string;stage:'protocol'|'capability'|'geometry';reason:string}
+/** Report filtering without relaxing schema checks just to retain more candidates. */
+export function inspectPlans(value:unknown,ctx:AgentContext){
+ const plans=validatePlans(value,ctx),accepted=new Set(plans.map(p=>p.id)),rejections:PlanRejection[]=[];
+ if(!record(value)||!Array.isArray(value.plans))return {plans,rejections:[{id:'response',stage:'protocol' as const,reason:'plans_array_missing'}]};
+ for(const raw of value.plans.slice(0,7)){
+  if(record(raw)&&accepted.has(String(raw.id)))continue;
+  let reason='invalid_parameters_or_references';
+  if(record(raw)&&Array.isArray(raw.steps)){
+   const artifacts=new Set(Array.isArray(raw.artifacts)?raw.artifacts.filter(record).map(a=>a.id):[]);
+   if(raw.steps.some(s=>record(s)&&Array.isArray(s.artifactIds)&&s.artifactIds.some(id=>!artifacts.has(id))))reason='artifactIds_must_reference_artifacts_not_sourceIds';
+   else if(raw.steps.some(s=>record(s)&&Array.isArray(s.targets)&&s.targets.some(id=>!ctx.windows.some(w=>w.id===id))))reason='target_window_missing';
+   else if(raw.steps.some(s=>record(s)&&s.type==='region'&&!ctx.windows.some(w=>w.regions?.some(r=>r.id===s.regionId))))reason='region_not_observed';
+  }
+  rejections.push({id:record(raw)?String(raw.id??'unknown'):'unknown',stage:'protocol',reason});
+ }
+ return {plans,rejections};
 }

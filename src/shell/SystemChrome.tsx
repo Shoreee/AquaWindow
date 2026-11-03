@@ -1,276 +1,72 @@
-import {cancelSurfaceInteraction,fuseSurfaces} from './surfaceFusion';
+import {memo,useEffect,useRef,useState} from 'react';
+import {cancelSurfaceInteraction} from './surfaceFusion';
 import {cancelCapsuleMotion} from '../agent/adaptive/capsule';
 import {cancelManualWindowMotion} from '../agent/adaptive/manualMotion';
 import {credentialState} from '../agent/adaptive/credentials';
-import { memo, useEffect, useRef, useState } from "react";
-import { AppIcon } from "../apps/icons";
-import { APPS } from "../apps/registry";
-import { adaptation, planBuffer, serviceStore, setDeepSeekEnabled, setDeepSeekApiKey } from "../agent/adaptive/runtime";
-import { statusMessages } from "../agent/adaptive/buffer";
-import { useStore } from "../system/createStore";
-import { agent, kernel, ui, undo, useKernelState, workArea } from "./hooks";
-import {toast} from '../system/ui';
-import {studyInteractionModes,studyTechniques,type StudyInteractionModeId} from '../study/interactionModes';
+import {adaptation,planBuffer,serviceStore,setDeepSeekEnabled,setDeepSeekApiKey} from '../agent/adaptive/runtime';
+import {useStore} from '../system/createStore';
+import {agent,kernel,ui,undo,useKernelState} from './hooks';
+import {CONDITIONS} from '../techniques/techniques';
+import {openExperiment,restoreStudyWorkspace,fileTaskStore,openFileTask} from '../study/workspaces';
+import {studyTechniques,type StudyInteractionModeId} from '../study/interactionModes';
+import {experimentFlow} from '../study/flow';
 import {openStudyResource} from '../apps/StudyMaterials';
 import {openApp} from './Chrome';
-import {fileLayoutModes,fileTaskStore,openFileTask,selectFileLayoutMode,switchStudyEnvironment,type StudyEnvironment} from '../study/workspaces';
+import {DesktopAppIcon} from './DesktopAppIcon';
 
-export function bootDesktop(studyMode:StudyInteractionModeId|null=ui.get().studyMode) {
-  cancelSurfaceInteraction();
-  cancelCapsuleMotion();
-  cancelManualWindowMotion();
-  adaptation.cancel();
-  agent.stop();
-  if(ui.get().studyEnvironment==='files')kernel.restoreWorkspace({windows:{},order:[],focusedId:null,screen:kernel.getState().screen,rev:0});
-  else kernel.closeAll();
-  ui.set({
-    scenarioId: null,
-    strategyId: null,
-    scenarioPanel: false,
-    agentEnabled: false,
-    autonomy: "off",
-    studyMode,
-    tech: studyTechniques(studyMode),
-  });
-  if(ui.get().studyEnvironment==='files')openFileTask(fileTaskStore.get().current);
+function cancelGestures(){cancelSurfaceInteraction();cancelCapsuleMotion();cancelManualWindowMotion();adaptation.cancel(true);}
+export function bootDesktop(studyMode:StudyInteractionModeId|null=ui.get().studyMode){
+ cancelGestures();agent.stop();
+ if(ui.get().experimentOpen)restoreStudyWorkspace({windows:{},order:[],focusedId:null,screen:kernel.getState().screen,rev:0});else kernel.closeAll();
+ ui.set({scenarioId:null,strategyId:null,scenarioPanel:false,agentEnabled:false,autonomy:'off',studyMode,tech:ui.get().experimentOpen?studyTechniques(studyMode):{...CONDITIONS[3].techniques,yield:'none',cutout:true}});
+ if(ui.get().studyEnvironment==='files')openFileTask(fileTaskStore.get().current);
 }
-
-function selectStudyMode(mode:StudyInteractionModeId){
-  if(ui.get().studyMode===mode)return;
-  cancelSurfaceInteraction();
-  cancelCapsuleMotion();
-  cancelManualWindowMotion();
-  adaptation.cancel();
-  agent.stop();
-  ui.set({studyMode:mode,tech:studyTechniques(mode),agentEnabled:false,autonomy:'off'});
+function launchExperiment(){cancelGestures();if(!ui.get().experimentOpen)experimentFlow.set({view:'hub'});openExperiment();}
+function useOutside(ref:{current:HTMLDivElement|null},close:()=>void){
+ useEffect(()=>{const outside=(event:PointerEvent)=>{if(!ref.current?.contains(event.target as Node))close();};const key=(event:KeyboardEvent)=>{if(event.key==='Escape')close();};window.addEventListener('pointerdown',outside);window.addEventListener('keydown',key);return()=>{window.removeEventListener('pointerdown',outside);window.removeEventListener('keydown',key);};},[ref,close]);
 }
-
-function SystemMenuBarImpl() {
-  // Subscribe to menu semantics, not every animation rectangle.
-  useKernelState(s=>JSON.stringify([s.focusedId,...s.order.map(id=>[id,s.windows[id].appId,s.windows[id].title])]));
-  const state=kernel.getState();
-  const status = useStore(serviceStore, (s) => s.status);
-  const remoteEnabled = useStore(serviceStore, (s) => s.remoteEnabled);
-  const hasKey=useStore(credentialState,s=>s.hasKey);
-  const [apiDraft,setApiDraft]=useState('');
-  const phase = useStore(adaptation.store, (s) => s.phase);
-  const agentOn = useStore(ui, (s) => s.agentEnabled);
-  const studyMode = useStore(ui, (s) => s.studyMode);
-  const studyEnvironment=useStore(ui,s=>s.studyEnvironment);
-  const fileRunning=useStore(fileTaskStore,s=>s.running);
-  const fileLayoutMode=useStore(fileTaskStore,s=>s.layoutMode);
-  const [menu, setMenu] = useState<string | null>(null);
-  const [now, setNow] = useState(new Date());
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(t);
-  }, []);
-  useEffect(() => {
-    const fn = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setMenu(null);
-    };
-    window.addEventListener("pointerdown", fn);
-    return () => window.removeEventListener("pointerdown", fn);
-  }, []);
-  useEffect(()=>{if(menu!=='system')setApiDraft('');},[menu]);
-  const focused = state.windows[state.focusedId ?? ""];
-  const action = (fn: () => void) => () => {
-    fn();
-    setMenu(null);
-  };
-  const toggleAgent = () => {
-    if (agentOn) {
-      ui.set({ agentEnabled: false, autonomy: 'off' });
-      adaptation.cancel(true);
-      setDeepSeekEnabled(false);
-      planBuffer.entries.clear();
-      agent.stop();
-      agent.reset();
-    } else {
-      ui.set({ agentEnabled: true, autonomy: 'preview' });
-      agent.start();
-    }
-  };
-  const prepareShake=()=>{
-    const windows=kernel.list().filter(win=>win.form==='normal'&&!win.minimized);
-    if(windows.length<2){toast('先从文件夹打开两个窗口');return;}
-    const state=kernel.getState(),ordered=state.order.map(id=>state.windows[id]).filter(win=>win?.form==='normal'&&!win.minimized);
-    const a=ordered.at(-1),b=ordered.at(-2);
-    if(!a||!b)return;
-    if(a.group&&a.group===b.group){toast('这两个窗口已经融合，可以抓住标题栏左右抖动');return;}
-    fuseSurfaces(a.id,b.id,false,true);
-  };
-  const selectEnvironment=(next:StudyEnvironment)=>{
-    cancelSurfaceInteraction();cancelCapsuleMotion();cancelManualWindowMotion();adaptation.cancel();agent.stop();
-    switchStudyEnvironment(next);
-  };
-  return (
-    <div className="menubar system-menubar" ref={ref}>
-      <button
-        className="system-brand"
-        onClick={() => setMenu(menu === "system" ? null : "system")}
-      >
-        <span className="system-mark" />
-        AquaWindow
-      </button>
-      <span className="system-app">
-        {focused ? APPS[focused.appId]?.name : "桌面"}
-      </span>
-      <button
-        className="mb-item"
-        onClick={() => setMenu(menu === "windows" ? null : "windows")}
-      >
-        窗口
-      </button>
-      <button
-        className="mb-item"
-        onClick={() => setMenu(menu === "edit" ? null : "edit")}
-      >
-        编辑
-      </button>
-      <button className="mb-item study-environment-trigger" aria-expanded={menu==='study-environment'} onClick={()=>setMenu(menu==='study-environment'?null:'study-environment')}>实验环境：{studyEnvironment==='paper'?'论文阅读':'文件管理'}</button>
-      <button className="mb-item study-mode-trigger" disabled={studyEnvironment==='files'&&fileRunning} aria-expanded={menu==='study-mode'} onClick={()=>setMenu(menu==='study-mode'?null:'study-mode')}>
-        交互形式：{studyEnvironment==='files'?(fileLayoutMode?fileLayoutModes.find(item=>item.id===fileLayoutMode)?.label:'请选择'):(studyMode?studyInteractionModes.find(item=>item.id===studyMode)?.label:'请选择')}
-      </button>
-      {studyEnvironment==='paper'&&<button className="mb-item" aria-label="截图（Shift+S）" onClick={()=>window.dispatchEvent(new Event('study:screenshot:start'))}>截图 <kbd>Shift+S</kbd></button>}
-      <div className="mb-spacer" />
-      {agentOn && <span
-        className={`agent-service ${status === "ready" || status === "local" ? "ready" : ""}`}
-        title={statusMessages[status]}
-      >
-        <i />
-        {phase !== "idle"
-          ? "正在协作"
-          : !remoteEnabled
-            ? "本地规则"
-          : status === "ready"
-            ? "随时就绪"
-            : status === "thinking" || status === "warming"
-              ? "感知中"
-              : "连接待就绪"}
-      </span>}
-      <button type="button" className={`agent-toggle ${agentOn ? 'on' : ''}`} role="switch" aria-checked={agentOn} aria-label="Agent 功能" onClick={toggleAgent}>
-        <span>Agent</span><i aria-hidden="true" />
-      </button>
-      <span className="system-date">
-        {now.toLocaleString("zh-CN", {
-          timeZone: "Asia/Shanghai",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        })}
-      </span>
-      {menu && (
-        <div className={`mb-drop system-drop ${menu}`}>
-          {menu === "system" && (
-            <>
-              <div className="system-about">
-                <span className="system-mark" />
-                <b>AquaWindow</b>
-                <small>随思绪流动的工作空间</small>
-              </div>
-              {agentOn && <><button role="switch" aria-checked={remoteEnabled} aria-label="接入 DeepSeek" onClick={action(() => setDeepSeekEnabled(!remoteEnabled))}>
-                接入 DeepSeek <span className={`deepseek-toggle ${remoteEnabled ? "on" : ""}`} aria-hidden="true"><i /></span>
-              </button>
-              <div className="system-connection">{remoteEnabled ? "已允许 DeepSeek 生成方案" : "已关闭 · 本地规则演示，不消耗模型 token"}</div>
-              <form className="deepseek-key-form" onSubmit={e=>{e.preventDefault();if(apiDraft.trim()){setDeepSeekApiKey(apiDraft);setApiDraft('');}}}>
-                <label htmlFor="deepseek-api-key">DeepSeek API Key</label>
-                <input id="deepseek-api-key" type="password" value={apiDraft} onChange={e=>setApiDraft(e.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder={hasKey?'已填写 · 可输入新 Key 替换':'输入你的 API Key'}/>
-                <div className="deepseek-key-actions"><button type="submit" disabled={!apiDraft.trim()}>保存 Key</button>{hasKey&&<button type="button" onClick={()=>{setDeepSeekApiKey('');setApiDraft('');}}>清除 Key</button>}</div>
-                <small>{hasKey?'Key 仅保留在当前页面，刷新即清空。':'仅保存在当前页面；保存后仍需开启接入。'}</small>
-              </form></>}
-              <div className="mb-sep" />
-              <button onClick={action(bootDesktop)}>重新整理桌面</button>
-              <div className="system-connection">{agentOn ? statusMessages[status] : 'Agent 已关闭；手动窗口交互仍可使用。'}</div>
-            </>
-          )}
-          {menu === "windows" && (
-            <>
-              <button onClick={action(() => ui.set({ missionControl: true }))}>
-                所有窗口 <kbd>F3</kbd>
-              </button>
-              <button
-                disabled={!focused}
-                onClick={action(() => focused && kernel.minimize(focused.id))}
-              >
-                最小化当前窗口
-              </button>
-              <button
-                disabled={!focused}
-                onClick={action(
-                  () =>
-                    focused && kernel.toggleMaximize(focused.id, workArea()),
-                )}
-              >
-                缩放当前窗口
-              </button>
-              <div className="mb-sep" />
-              {state.order.map((id) => (
-                <button key={id} onClick={action(() => kernel.restore(id))}>
-                  {state.focusedId === id ? "✓ " : ""}
-                  {state.windows[id].title}
-                </button>
-              ))}
-            </>
-          )}
-          {menu === "edit" && (
-            <>
-              <button disabled={!kernel.canUndo()} onClick={action(undo)}>
-                撤销布局 <kbd>⌘ Z</kbd>
-              </button>
-              {agentOn && <div className="system-connection">
-                长按空格唤出 · 松手停留
-                <br />
-                长按空格探索 · ← → 选择 · 松开采用 · Esc 撤回
-              </div>}
-            </>
-          )}
-          {menu === 'study-mode' && <>
-            <p className="study-mode-menu-intro">{studyEnvironment==='files'?'选择候选文件的呈现方式。':'每次只启用一种交互形式。涡虫拖动始终保留。'}</p>
-            {studyEnvironment==='files'?fileLayoutModes.map(item=><button key={item.id} className={`study-mode-option${fileLayoutMode===item.id?' selected':''}`} aria-pressed={fileLayoutMode===item.id} onClick={action(()=>selectFileLayoutMode(item.id))}><span><strong>{item.label}</strong><small>{item.description}</small></span><i aria-hidden="true">{fileLayoutMode===item.id?'✓':''}</i></button>):studyInteractionModes.map(item=><button key={item.id} className={`study-mode-option${studyMode===item.id?' selected':''}`} aria-pressed={studyMode===item.id} onClick={action(()=>selectStudyMode(item.id))}>
-              <span><strong>{item.label}</strong><small>{item.description}</small></span><i aria-hidden="true">{studyMode===item.id?'✓':''}</i>
-            </button>)}
-            {studyEnvironment==='paper'&&studyMode==='fusion'&&<><div className="mb-sep"/><button onClick={action(prepareShake)}>准备已融合窗口</button></>}
-            <p className="study-mode-menu-foot">{studyEnvironment==='files'?'选择后点击任务说明中的“开始任务”展示候选文件。':'切换交互形式会保留已打开的窗口和阅读位置。'}</p>
-          </>}
-          {menu==='study-environment'&&<><p className="study-mode-menu-intro">两个环境的窗口与任务分别保留。</p><button className="study-mode-option" aria-pressed={studyEnvironment==='paper'} onClick={action(()=>selectEnvironment('paper'))}><span><strong>论文阅读</strong><small>AutoUE 阅读与对照任务</small></span></button><button className="study-mode-option" aria-pressed={studyEnvironment==='files'} onClick={action(()=>selectEnvironment('files'))}><span><strong>文件管理</strong><small>找论文、找代码、整理遗留文件</small></span></button></>}
-        </div>
-      )}
-    </div>
-  );
+function AgentSettings(){
+ const enabled=useStore(ui,s=>s.agentEnabled),remote=useStore(serviceStore,s=>s.remoteEnabled),hasKey=useStore(credentialState,s=>s.hasKey);
+ const [draft,setDraft]=useState('');
+ const toggle=()=>{
+  if(enabled){ui.set({agentEnabled:false,autonomy:'off'});adaptation.cancel(true);setDeepSeekEnabled(false);planBuffer.entries.clear();agent.stop();agent.reset();}
+  else{ui.set({agentEnabled:true,autonomy:'preview'});agent.start();}
+ };
+ return <section className="agent-settings"><header><span className={`system-mark ${enabled?'enabled':''}`}/>AquaWindow</header>
+  <button role="switch" aria-label="Agent 功能" aria-checked={enabled} onClick={toggle}>Agent<span className={`deepseek-toggle ${enabled?'on':''}`}><i/></span></button>
+  {enabled&&<><button role="switch" aria-label="接入 DeepSeek" aria-checked={remote} onClick={()=>setDeepSeekEnabled(!remote)}>DeepSeek 布局建议<span className={`deepseek-toggle ${remote?'on':''}`}><i/></span></button>
+  <form className="deepseek-key-form" onSubmit={event=>{event.preventDefault();if(draft.trim()){setDeepSeekApiKey(draft);setDraft('');}}}><label htmlFor="deepseek-api-key">DeepSeek API Key</label><input id="deepseek-api-key" type="password" autoComplete="off" spellCheck={false} value={draft} onChange={event=>setDraft(event.target.value)} placeholder={hasKey?'已保存':'输入 Key'}/><div className="deepseek-key-actions"><button disabled={!draft.trim()}>保存</button>{hasKey&&<button type="button" onClick={()=>setDeepSeekApiKey('')}>清除</button>}</div><small>仅本次使用，刷新清除。</small></form></>}
+ </section>;
 }
-
-function SystemDockImpl() {
-  const environment=useStore(ui,s=>s.studyEnvironment);
-  const apps=environment==='paper'?[{id:'finder',label:'文件',resource:'files'},{id:'browser',label:'浏览器',resource:'browser'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'},{id:'gallery',label:'图库',resource:'gallery'}]:[{id:'finder',label:'文件',resource:'finder'}];
-  const running=useKernelState(s=>apps.reduce((bits,app,index)=>Object.values(s.windows).some(w=>environment==='paper'?w.appId==='study'&&w.props.resource===app.resource&&!w.minimized:w.appId===app.id&&!w.minimized)?bits|(1<<index):bits,0));
-  return (
-    <div className="dock-wrap">
-      <div className="dock system-dock">
-        {apps.map((app,index)=><button className="dock-i" key={app.id} aria-label={`打开${app.label}`} onClick={()=>environment==='paper'?openStudyResource(app.resource,app.resource==='notes'?'实验笔记':app.resource==='qa'?'AI 问答':app.resource==='browser'?'浏览器':app.resource==='gallery'?'图库':'文件'):openApp(app.id)}>
-          <span className="dock-tip">{app.label}</span>
-          <span className="dock-img">{app.id==='gallery'||app.id==='file-study-gallery'?<span className="dock-gallery-icon" aria-hidden="true">▧</span>:<AppIcon appId={app.id} size={45}/>}</span>
-          {(running&(1<<index))!==0&&<span className="dock-dot"/>}
-        </button>)}
-        <span className="dock-sep" />
-        <button
-          className="dock-i dock-overview"
-          title="所有窗口"
-          aria-label="所有窗口"
-          onClick={() => ui.set({ missionControl: true })}
-        >
-          <span />
-          <span />
-          <span />
-          <span />
-        </button>
-      </div>
-    </div>
-  );
+function SystemTray(){
+ const [open,setOpen]=useState(false),[now,setNow]=useState(new Date());const root=useRef<HTMLDivElement>(null);
+ const focused=useKernelState(s=>s.focusedId);const undoable=useKernelState(()=>kernel.canUndo());
+ useOutside(root,()=>setOpen(false));useEffect(()=>{const timer=setInterval(()=>setNow(new Date()),30000);return()=>clearInterval(timer);},[]);
+ const action=(fn:()=>void)=>()=>{fn();setOpen(false);};
+ return <div className="taskbar-tray" ref={root}>
+  <button className="tray-trigger" aria-label="系统控制" aria-expanded={open} onClick={()=>setOpen(value=>!value)}><img src={`${import.meta.env.BASE_URL}harmony/settings.svg`} alt=""/></button>
+  <time className="taskbar-clock" dateTime={now.toISOString()}><span>{now.toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false})}</span><span>{now.toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai'})}</span></time>
+  {open&&<div className="system-controls" role="dialog" aria-label="系统控制面板"><AgentSettings/><div className="settings-divider"/>
+   <button onClick={action(()=>ui.set({missionControl:true}))}><img src={`${import.meta.env.BASE_URL}harmony/windows.svg`} alt=""/>所有窗口</button>
+   <button disabled={!undoable} onClick={action(undo)}><img src={`${import.meta.env.BASE_URL}harmony/undo.svg`} alt=""/>撤销 <kbd>Ctrl Z</kbd></button>
+   <button onClick={action(()=>window.dispatchEvent(new Event('study:screenshot:start')))}><img src={`${import.meta.env.BASE_URL}harmony/screenshot.svg`} alt=""/>截图 <kbd>Ctrl Shift S</kbd></button>
+   <button disabled={!focused} onClick={action(()=>focused&&kernel.minimize(focused))}><img src={`${import.meta.env.BASE_URL}harmony/minimize.svg`} alt=""/>最小化</button>
+   <button onClick={action(()=>bootDesktop())}><img src={`${import.meta.env.BASE_URL}harmony/reset.svg`} alt=""/>重置桌面</button>
+  </div>}
+ </div>;
 }
-
-export const SystemMenuBar=memo(SystemMenuBarImpl);
+function SystemDockImpl(){
+ const environment=useStore(ui,s=>s.studyEnvironment),experimentOpen=useStore(ui,s=>s.experimentOpen);
+ const [startOpen,setStartOpen]=useState(false);const root=useRef<HTMLDivElement>(null);useOutside(root,()=>setStartOpen(false));
+ const apps=environment==='paper'?[{id:'finder',label:'文件',resource:'files'},{id:'browser',label:'浏览器',resource:'browser'},{id:'writer',label:'笔记',resource:'notes'},{id:'chat',label:'AI 问答',resource:'qa'},{id:'gallery',label:'图库',resource:'gallery'}]:[{id:'finder',label:'文件',resource:'finder'}];
+ const running=useKernelState(s=>apps.reduce((bits,app,index)=>Object.values(s.windows).some(win=>environment==='paper'?win.appId==='study'&&win.props.resource===app.resource:win.appId===app.id)?bits|(1<<index):bits,0));
+ const launch=(app:typeof apps[number])=>{setStartOpen(false);environment==='paper'?openStudyResource(app.resource,app.label):openApp(app.id);};
+ return <div className="dock-wrap" ref={root}>
+  {startOpen&&<div className="desktop-start-menu" role="dialog" aria-label="开始菜单">{apps.map(app=><button key={app.id} onClick={()=>launch(app)}><DesktopAppIcon id={app.id}/>{app.label}</button>)}<button onClick={()=>{setStartOpen(false);launchExperiment();}}><DesktopAppIcon id="experiment"/>实验</button></div>}
+  <div className="dock system-dock"><button className="taskbar-start" aria-label="开始" aria-expanded={startOpen} onClick={()=>setStartOpen(value=>!value)}><i/><i/><i/><i/></button>
+   {apps.map((app,index)=><button className="dock-i" key={app.id} aria-label={`打开${app.label}`} title={app.label} onClick={()=>launch(app)}><DesktopAppIcon id={app.id}/>{(running&(1<<index))!==0&&<span className="dock-dot"/>}</button>)}
+   <button className="dock-i experiment-launcher" aria-label="打开实验" title="实验" onClick={launchExperiment}><DesktopAppIcon id="experiment"/>{experimentOpen&&<span className="dock-dot"/>}</button>
+  </div><SystemTray/>
+ </div>;
+}
 export const SystemDock=memo(SystemDockImpl);

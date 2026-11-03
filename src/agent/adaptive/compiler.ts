@@ -1,4 +1,5 @@
-import {fusionPlacement,surfaceBonds} from '../../shell/surfaceBondGeometry';
+import {solveArrangement} from './layoutSpecification';
+import {fusionPlacement,surfaceBonds,surfaceComponent} from '../../shell/surfaceBondGeometry';
 import {visualRect} from "../../techniques/depth";
 import {capsuleSize} from "./capsuleGeometry";
 import type { KernelState, Rect, WindowState } from "../../kernel/types";
@@ -125,8 +126,25 @@ export function compilePlan(
       patch(id,{...(best?{rect:best.rect,depth:0}:{}),props:{...host.props,agentView:{...view,revealRegion:best?.region??{x:.27,y:.33,w:.46,h:.34},revealSource:best?.source}}});
     }
 
+    if(step.type==='corner-peel')for(const id of step.targets){const w=windows[id];if(w)patch(id,{props:{...w.props,agentCornerFold:{corner:step.corner,amount:step.amount}}});}
+    if(step.type==='region')for(const id of step.targets){const w=windows[id];if(w)patch(id,{importance:w.importance.map(r=>r.id===step.regionId?{...r,kind:step.mode==='hole'?'hole':undefined,weight:1}:r)});}
+    if(step.type==='fuse'){
+      const moving=windows[step.movingId],fixed=windows[step.fixedId];
+      if(moving&&fixed){
+        const current={...base,windows},placement=fusionPlacement(moving.rect,fixed.rect,W),movingIds=surfaceComponent(current,moving.id),members=[...new Set([...movingIds,...surfaceComponent(current,fixed.id)])];
+        const ahead=placement.axis==='x'?placement.rect.x<fixed.rect.x:placement.rect.y<fixed.rect.y;
+        const bond={id:`bond:${plan.id}:${moving.id}:${fixed.id}`,a:ahead?moving.id:fixed.id,b:ahead?fixed.id:moving.id,axis:placement.axis,createdAt:0};
+        const dx=placement.rect.x-moving.rect.x,dy=placement.rect.y-moving.rect.y;
+        for(const id of members){const w=windows[id];patch(id,{group:`surface:${members.slice().sort().join(':')}`,...(movingIds.includes(id)?{rect:{...w.rect,x:w.rect.x+dx,y:w.rect.y+dy}}:{}),props:{...w.props,surfaceBonds:id===moving.id||id===fixed.id?[...surfaceBonds(w).filter(b=>b.id!==bond.id),bond]:surfaceBonds(w)}});}
+      }
+    }
     if (step.type === "arrange") {
-      const subjects = plan.primaryTargets.filter((id) => step.targets.includes(id));
+      if(step.axis||step.weights||step.order||step.anchorId||step.share){
+        const rects=solveArrangement({...base,windows},step,context);if(!rects)throw new Error('layout_unreadable');
+        for(const [id,rect] of rects)patch(id,{rect,depth:0});continue;
+      }
+      const primary=plan.primaryTargets.filter(id=>step.targets.includes(id));
+      const subjects=step.layout==='focus'?[primary.includes(context.focusedId??'')?context.focusedId!:primary[0]]:primary;
       const references = step.targets.filter((id) => !subjects.includes(id));
       const gap = Math.min(24, W.w * .025);
       if (step.layout === "compare") {

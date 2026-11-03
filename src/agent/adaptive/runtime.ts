@@ -1,6 +1,7 @@
-import {cancelSurfaceInteraction,surfaceBusy} from '../../shell/surfaceFusion';
+import {verifyCandidate} from './verification';
+import {cancelSurfaceInteraction,surfaceBusy,surfaceUi} from '../../shell/surfaceFusion';
 import {getSessionKey,setSessionKey} from './credentials';
-import {cancelManualWindowMotion,manualCursorDragActive,manualWindowMotionActive} from "./manualMotion";
+import {cancelManualWindowMotion,manualWindowMotionActive} from "./manualMotion";
 import {previewCapsuleDrop,cancelCapsuleMotion,capsuleMotionActive,capsuleRectInside} from "./capsule";
 import { kernel, workArea } from "../../system/kernel";
 import { bus } from "../../system/bus";
@@ -8,8 +9,9 @@ import { createStore } from "../../system/createStore";
 import { toast, ui } from "../../system/ui";
 import { log } from "../../study/logger";
 import { bounded } from "./compiler";
-import { CandidateBuffer, type ServiceStatus } from "./buffer";
-import { makeContext } from "./context";
+import { CandidateBuffer,statusMessages, type ServiceStatus } from "./buffer";
+import {TaskDrivenWorkspace} from './workspace';
+import {permittedPlans} from './policy';
 import { AdaptationSession } from "./session";
 import type { AgentContext } from "./types";
 
@@ -27,15 +29,21 @@ export const serviceStore = createStore<{
   remoteEnabled: boolean;
 }>({ status: "local", configured: false, model: "", remoteEnabled: false });
 const feedback: AgentContext["feedback"] = { accepted: [], rejected: [] };
+export const workspaceModel=new TaskDrivenWorkspace();
 export const planBuffer = new CandidateBuffer();
-planBuffer.onChange = () => serviceStore.set({ status: planBuffer.status, remoteEnabled: planBuffer.remoteEnabled });
+planBuffer.filter=(plans,ctx)=>permittedPlans(plans,ctx).filter(plan=>verifyCandidate(kernel.getState(),plan,ctx)!==null);
+planBuffer.onInterpretation=(value,ctx)=>workspaceModel.acceptInterpretation(value,ctx);
+planBuffer.onChange = () => {serviceStore.set({ status: planBuffer.status, remoteEnabled: planBuffer.remoteEnabled });adaptation.refreshCandidates();};
 const context = (selected: string[]) =>
-  makeContext(kernel.getState(), workArea(), selected, bus.recent, feedback);
+  workspaceModel.context(kernel.getState(), workArea(), selected, bus.recent, feedback);
 export const adaptation = new AdaptationSession({
   kernel,
   context,
   plans: (ctx) => planBuffer.get(ctx),
+  refinements:(ctx)=>planBuffer.remotePlans(ctx),
   request: (ctx) => planBuffer.request(ctx, true),
+  timeout:ctx=>planBuffer.cancelContext(ctx),
+  failure:()=>['local','unconfigured','auth','limited','busy','timeout','invalid','offline'].includes(planBuffer.status)?statusMessages[planBuffer.status]:undefined,
   feedback: (plan, accepted) => {
     const list = accepted ? feedback.accepted : feedback.rejected;
     list.push(plan.title);
@@ -75,18 +83,21 @@ export {restoreCapsule} from './capsule';
 
 export function startAdaptiveRuntime() {
   planBuffer.start();
-  let key = "";
+
   const tick = () => {
     if (document.hidden) return;
     if (ui.get().agentEnabled&&!adaptation.active&&!capsuleMotionActive()&&!manualWindowMotionActive()&&!surfaceBusy()) {
       const ctx = context([]);
-      if (ctx.key !== key) {
-        key = ctx.key;
-        planBuffer.request(ctx);
-      }
+      planBuffer.request(ctx);
     }
     if (ui.get().agentEnabled) planBuffer.tick();
   };
+  let wasEnabled=ui.get().agentEnabled;
+  const offPermissions=ui.subscribe(()=>{
+    const enabled=ui.get().agentEnabled;
+    if(wasEnabled&&!enabled){wasEnabled=false;adaptation.cancel(true);planBuffer.setRemoteEnabled(false);planBuffer.entries.clear();}
+    wasEnabled=enabled;
+  });
   const background = window.setInterval(tick, 500);
   let gesture = 0;
   const animateGesture = () => {
@@ -95,6 +106,7 @@ export function startAdaptiveRuntime() {
   };
   gesture = requestAnimationFrame(animateGesture);
   const off = kernel.onEvent((e) => {
+    if(e.type==='reset')workspaceModel.reset();
     if (e.actor === "user" && e.type === "focus")
       bus.emit({ type: "window.focus", windowId: e.windowId });
     if (adaptation.active && ["close", "open", "reset"].includes(e.type))
@@ -112,9 +124,6 @@ export function startAdaptiveRuntime() {
     if((e.key==='Escape'||(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')&&cancelSurfaceInteraction()){e.preventDefault();e.stopImmediatePropagation();return;}
     if(e.key==='Escape'&&manualWindowMotionActive()){cancelManualWindowMotion();previewCapsuleDrop([]);if(kernel.canUndo())kernel.undo('user');e.preventDefault();e.stopImmediatePropagation();return;}
     if(e.key==='Escape'&&cancelCapsuleMotion()){e.preventDefault();e.stopImmediatePropagation();return;}
-    if(e.key==='Escape'&&!adaptation.active&&!editable(e.target)&&kernel.canUndo()){
-      e.preventDefault();e.stopImmediatePropagation();kernel.undo('user');return;
-    }
     if(adaptation.active&&['ArrowLeft','ArrowRight'].includes(e.key)){
       e.preventDefault();e.stopImmediatePropagation();adaptation.navigate(e.key==='ArrowLeft'?-1:1);return;
     }
@@ -178,9 +187,11 @@ export function startAdaptiveRuntime() {
     pointer.x = e.clientX;
     pointer.y = e.clientY;
     pointer.visible = e.pointerType !== "touch";
-    if (!ui.get().agentEnabled && !manualCursorDragActive()) return;
+
+    if(ui.get().activeId&&manualWindowMotionActive()&&['ew','ns','nwse','nesw'].includes(pointer.kind))return;
     const target = e.target as HTMLElement;
-    if (target.closest('input,textarea,[contenteditable="true"]'))
+    if(surfaceUi.get().split?.dragging||document.querySelector('.peel-dragging')||target.closest('.liquid-peel,.liquid-peel-handle'))pointer.kind='arrow';
+    else if (target.closest('input,textarea,[contenteditable="true"]'))
       pointer.kind = "text";
     else if (target.closest(".rz-e,.rz-w")) pointer.kind = "ew";
     else if (target.closest(".rz-n,.rz-s")) pointer.kind = "ns";
@@ -235,6 +246,7 @@ export function startAdaptiveRuntime() {
     clearInterval(background);
     cancelAnimationFrame(gesture);
     off();
+    offPermissions();
     planBuffer.stop();
     adaptation.cancel();
     window.removeEventListener("keydown", down, true);

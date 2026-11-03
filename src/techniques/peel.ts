@@ -56,3 +56,20 @@ export function peelGeometry(w: number, h: number, corner: Pt, p: Pt): PeelGeome
 
 export const polyCss = (pts: Pt[]) => `polygon(${pts.map((q) => `${q[0].toFixed(1)}px ${q[1].toFixed(1)}px`).join(',')})`;
 export const polySvg = (pts: Pt[]) => pts.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' ');
+
+/** Keep the reflected fold vertices; soften only the free edges of its backside. */
+export function liquidFlapPath(points:Pt[],fold:[Pt,Pt]|null,time:number,amplitude=1.5){
+ if(!points.length)return '';
+ const f=fold,foldLength=f?Math.hypot(f[1][0]-f[0][0],f[1][1]-f[0][1]):1;
+ const onFold=(p:Pt)=>!!f&&Math.abs((p[0]-f[0][0])*(f[1][1]-f[0][1])-(p[1]-f[0][1])*(f[1][0]-f[0][0]))/foldLength<.6;
+ let path=`M${points[0][0].toFixed(2)} ${points[0][1].toFixed(2)}`;
+ for(let i=0;i<points.length;i++){
+  const a=points[i],b=points[(i+1)%points.length],dx=b[0]-a[0],dy=b[1]-a[1],length=Math.max(1,Math.hypot(dx,dy));
+  const strength=onFold(a)&&onFold(b)?0:Math.min(amplitude,length*.025);
+  for(let j=1;j<=12;j++){
+   const t=j/12,wave=Math.sin(Math.PI*t)*Math.sin(time*4.4+t*Math.PI*2+i)*strength;
+   path+=` L${(a[0]+dx*t-dy/length*wave).toFixed(2)} ${(a[1]+dy*t+dx/length*wave).toFixed(2)}`;
+  }
+ }
+ return path+' Z';
+}

@@ -14,6 +14,7 @@ export interface Toast {
 export interface UiState {
   condition: ConditionId;
   tech: Techniques;
+  experimentOpen: boolean;
   studyMode: StudyInteractionModeId|null;
   studyEnvironment: StudyEnvironment;
   agentEnabled: boolean;
@@ -36,7 +37,8 @@ export interface UiState {
 
 export const ui = createStore<UiState>({
   condition: 'fluid-agent',
-  tech: CONDITIONS[3].techniques,
+  tech: {...CONDITIONS[3].techniques,yield:'none',cutout:true},
+  experimentOpen: false,
   studyMode: null,
   studyEnvironment: 'paper',
   agentEnabled: false,

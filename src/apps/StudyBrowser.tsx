@@ -1,5 +1,7 @@
+import {observeApp} from '../agent/adaptive/observations';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {kernel} from '../system/kernel';
+import {DesktopAppIcon} from '../shell/DesktopAppIcon';
 
 const root=`${import.meta.env.BASE_URL}study/attention-zh/`;
 const pages=[
@@ -30,13 +32,15 @@ export default function StudyBrowser({windowId}:{windowId:string}){
   const [draft,setDraft]=useState(()=>browserState.get(windowId)?.draft??'');
   const [query,setQuery]=useState(()=>browserState.get(windowId)?.query??'');
   const [selected,setSelected]=useState<(typeof pages)[number]|null>(()=>pages.find(page=>page.id===browserState.get(windowId)?.selectedId)??null);
-  const detach=useRef<(()=>void)|null>(null);
+  const detach=useRef<(()=>void)|null>(null),frameRef=useRef<HTMLIFrameElement|null>(null);
+  const [forward,setForward]=useState<(typeof pages)[number]|null>(null);
   useEffect(()=>{browserState.set(windowId,{draft,query,selectedId:selected?.id??null,scroll:browserState.get(windowId)?.scroll??0});},[windowId,draft,query,selected]);
   useEffect(()=>()=>detach.current?.(),[]);
   const onFrameLoad=(frame:HTMLIFrameElement)=>{
     detach.current?.();
     try{
       const view=frame.contentWindow;if(!view)return;
+      const text=frame.contentDocument?.body?.innerText??'';observeApp(windowId,{kind:'web',availability:text?'content':'metadata-only',title:frame.title,text:text.slice(0,2800),documentId:frame.src});
       const scroll=browserState.get(windowId)?.scroll??0;
       requestAnimationFrame(()=>view.scrollTo(0,scroll));
       const remember=()=>{const state=browserState.get(windowId);if(state)browserState.set(windowId,{...state,scroll:view.scrollY});};
@@ -46,7 +50,7 @@ export default function StudyBrowser({windowId}:{windowId:string}){
   };
   const search=(event:FormEvent)=>{
     event.preventDefault();
-    detach.current?.();
+    detach.current?.();setForward(null);
     setQuery(draft.trim());
     setSelected(null);
     browserState.set(windowId,{draft,query:draft.trim(),selectedId:null,scroll:0});
@@ -56,17 +60,19 @@ export default function StudyBrowser({windowId}:{windowId:string}){
     const haystack=`${page.title} ${page.site} ${page.keywords}`.toLocaleLowerCase();
     return tokens.every(token=>haystack.includes(token));
   }):[];
+  useEffect(()=>{observeApp(windowId,{title:selected?.title??'浏览器',kind:'web',documentId:selected?.url,selection:query,availability:selected?'loading':query?'content':'empty',text:selected?`当前页面：${selected.title}`:query?`搜索：${query}\n结果：${results.map(r=>r.title).join('；')}`:'浏览器未打开页面，也没有搜索结果。'});},[windowId,query,selected]);
+  const open=(page:(typeof pages)[number])=>{detach.current?.();setForward(null);browserState.set(windowId,{draft:page.site,query,selectedId:page.id,scroll:0});setDraft(page.site);setSelected(page);};
+  const back=()=>{if(selected){detach.current?.();setForward(selected);setSelected(null);setDraft(query);}};
+  const ahead=()=>{if(forward){setSelected(forward);setDraft(forward.site);setForward(null);}};
   return <div className="study-browser">
     <form className="study-browser-bar" onSubmit={search}>
-      <input aria-label="搜索网页" value={draft} onChange={event=>setDraft(event.target.value)} placeholder="搜索网页或输入地址"/>
-      <button type="submit">搜索</button>
+      <button className="browser-nav" type="button" aria-label="后退" disabled={!selected} onClick={back}><img src={`${import.meta.env.BASE_URL}harmony/back.svg`} alt=""/></button>
+      <button className="browser-nav" type="button" aria-label="前进" disabled={!forward} onClick={ahead}><img src={`${import.meta.env.BASE_URL}harmony/forward.svg`} alt=""/></button>
+      <div className="browser-address"><img className="browser-address-mark" src={`${import.meta.env.BASE_URL}harmony/search.svg`} alt=""/><input aria-label="搜索网页" value={draft} onChange={event=>setDraft(event.target.value)} placeholder="搜索或输入网址"/>{selected&&<span className="browser-offline">离线副本</span>}</div>
+      <button className="browser-search" type="submit" aria-label="搜索">↵</button>
     </form>
-    {selected?<>
-      <div className="study-browser-page-label">{selected.site} · 离线阅读页</div>
-      <iframe key={selected.id} src={selected.url} title={selected.title} sandbox="allow-same-origin" referrerPolicy="no-referrer" onLoad={event=>onFrameLoad(event.currentTarget)}/>
-    </>:<div className="study-browser-results">
-      {!query?<div className="study-browser-empty"><span aria-hidden="true">◌</span><h2>浏览器</h2><p>输入网页名称或地址以查找材料。</p></div>:
-        results.length?results.map(page=><button type="button" key={page.id} onClick={()=>setSelected(page)}><small>{page.site}</small><strong>{page.title}</strong><span>本地保存的网页内容</span></button>):<p className="study-browser-no-results">没有找到与“{query}”匹配的本地网页。</p>}
+    {selected?<iframe ref={frameRef} key={selected.id} src={selected.url} title={selected.title} sandbox="allow-same-origin" referrerPolicy="no-referrer" onLoad={event=>onFrameLoad(event.currentTarget)}/>:<div className="study-browser-results">
+      {!query?<div className="study-browser-empty"><DesktopAppIcon id="browser"/></div>:results.length?results.map(page=><button type="button" key={page.id} onClick={()=>open(page)}><small>{page.site}</small><strong>{page.title}</strong></button>):<p className="study-browser-no-results">没有找到与“{query}”匹配的网页。</p>}
     </div>}
   </div>;
 }

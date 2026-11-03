@@ -1,14 +1,17 @@
+import {PlanningMemory,type PlanningPacket,type PlanningMessage} from '../src/agent/adaptive/planningIO.ts';
+const planningMemory=new PlanningMemory();
+import {validateInterpretation} from '../src/agent/adaptive/interpretation.ts';
 import {ADAPTIVE_PROMPT} from "../src/agent/adaptive/prompt.ts";
 import {
   createServer,
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, stat, mkdir,appendFile } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  validatePlans,
+  inspectPlans,
 } from "../src/agent/adaptive/protocol.ts";
 import type { AgentContext } from "../src/agent/adaptive/types.ts";
 import { beginTrace } from "./trace.ts";
@@ -42,7 +45,7 @@ async function body(req: IncomingMessage): Promise<unknown> {
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 64000) throw new Error("body_limit");
+    if (size > 8_000_000) throw new Error("body_limit");
     chunks.push(chunk);
   }
   return JSON.parse(Buffer.concat(chunks).toString());
@@ -55,7 +58,7 @@ function isContext(v: unknown): v is AgentContext {
     typeof c.key === "string" &&
     c.key.length < 100 &&
     typeof c.semanticKey === "string" &&
-    ["papers", "files"].includes(c.task) &&
+    ["papers", "files", "workspace"].includes(c.task) &&
     Array.isArray(c.windows) &&
     c.windows.length <= 8 &&
     c.windows.every(
@@ -81,17 +84,13 @@ function isContext(v: unknown): v is AgentContext {
     )
   );
 }
-async function plan(context: AgentContext, signal: AbortSignal) {
+async function plan(context: AgentContext, messages:PlanningMessage[], signal: AbortSignal) {
   const input = {
     model,
-    messages: [
-      { role: "system", content: ADAPTIVE_PROMPT },
-      { role: "user", content: JSON.stringify(context) },
-    ],
+    messages,
     response_format: { type: "json_object" },
-    thinking: { type: "enabled" },
-    reasoning_effort: "low",
-    max_tokens: 4096,
+    thinking: { type: "disabled" },
+    max_tokens: 2048,
   };
   const trace = await beginTrace(root, input, key);
   let output: unknown;
@@ -102,7 +101,7 @@ async function plan(context: AgentContext, signal: AbortSignal) {
         authorization: `Bearer ${key}`,
         "content-type": "application/json",
       },
-      signal: AbortSignal.any([signal, AbortSignal.timeout(55000)]),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]),
       body: JSON.stringify(input),
     });
     const text = await response.text();
@@ -118,11 +117,11 @@ async function plan(context: AgentContext, signal: AbortSignal) {
             ? "auth"
             : response.status === 429
               ? "limited"
-              : "upstream",
+              : response.status===503?"busy":"upstream",
         ),
         {
           status:
-            response.status === 401 ? 401 : response.status === 429 ? 429 : 502,
+            response.status === 401 ? 401 : response.status === 429 ? 429 : response.status===503?503:502,
         },
       );
     const data = output as {
@@ -132,7 +131,7 @@ async function plan(context: AgentContext, signal: AbortSignal) {
     if (!choice?.message?.content || choice.finish_reason === "length")
       throw Object.assign(new Error("invalid"), { status: 502 });
     const raw: unknown = JSON.parse(choice.message.content);
-    const plans = validatePlans(raw, context);
+    const {plans,rejections}=inspectPlans(raw,context);
     if (
       !raw ||
       typeof raw !== "object" ||
@@ -143,8 +142,11 @@ async function plan(context: AgentContext, signal: AbortSignal) {
     await trace.complete(output, {
       acceptedPlanIds: plans.map((p) => p.id),
       rejectedCount: (raw as { plans: unknown[] }).plans.length - plans.length,
+      rejections,
     });
-    return { plans, model, traceId: trace.id };
+    const interpretation=validateInterpretation((raw as {interpretation?:unknown}).interpretation,context);
+    const referenceId=planningMemory.remember({context,messages,output:{plans,interpretation}});
+    return {referenceId,interpretation,plans,rejections,rawIds:(raw as {plans:{id?:unknown}[]}).plans.map(p=>String(p?.id??'unknown')), model, traceId: trace.id };
   } catch (e) {
     const error = e as Error & { status?: number };
     await trace.fail(
@@ -165,22 +167,61 @@ const mime: Record<string, string> = {
 };
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
+  if(pathname==='/api/agent/diagnostic'){
+    if(req.method!=='POST'||req.headers['x-aw-diagnostic']!=='enabled')return send(res,403,{error:'disabled'});
+    try{
+      const value=await body(req) as Record<string,unknown>;
+      const allowed=['at','event','contextKey','traceId','requestMode','rawIds','acceptedIds','rejections','windowCount','sourceCharacters','message'];
+      if(!value||typeof value!=='object'||Object.keys(value).some(k=>!allowed.includes(k))||JSON.stringify(value).length>6000)return send(res,400,{error:'invalid'});
+      const dir=resolve(root,'log',new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()));
+      let line=JSON.stringify(value);if(key)line=line.split(key).join('[REDACTED]');line=line.replace(/sk-[A-Za-z0-9_-]{16,}/g,'[REDACTED]');
+      await mkdir(dir,{recursive:true,mode:0o700});await appendFile(resolve(dir,'runtime.jsonl'),line+'\n',{mode:0o600});return send(res,200,{ok:true});
+    }catch{return send(res,400,{error:'invalid'});}
+  }
   if (pathname === "/api/agent/status")
     return send(res, 200, { configured: !!key, model });
+  if(pathname==='/api/agent/chat'){
+    if(req.method!=='POST')return send(res,405,{error:'method'});
+    if(req.headers['x-aw-agent']!=='enabled')return send(res,403,{error:'disabled'});
+    if(!key)return send(res,503,{error:'unconfigured'});
+    const controller=new AbortController();
+    const disconnect=()=>{if(!res.writableEnded)controller.abort();};
+    res.once('close',disconnect);
+    try{
+      const input=await body(req) as {messages?:unknown};
+      const messages=input.messages;
+      if(!Array.isArray(messages)||!messages.length||messages.length>24||!messages.every(m=>m&&['user','assistant'].includes(m.role)&&(typeof m.content==='string'?m.content.length<=32000:Array.isArray(m.content)&&m.content.length<=8&&m.content.every((part: {type?:string;text?:string;image_url?:{url?:string}})=>part.type==='text'?typeof part.text==='string'&&part.text.length<=32000:part.type==='image_url'&&typeof part.image_url?.url==='string'&&/^data:image\/(png|jpeg|webp|gif);base64,/.test(part.image_url.url)))))return send(res,400,{error:'invalid'});
+      const response=await fetch('https://api.deepseek.com/chat/completions',{
+        method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},
+        signal:AbortSignal.any([controller.signal,AbortSignal.timeout(55000)]),
+        body:JSON.stringify({model,messages:[{role:'system',content:'你是工作空间中的 AI 助手。用用户的语言简洁准确地回答。只根据提供的内容回答，不要编造文档来源。'},...messages],thinking:{type:'disabled'},max_tokens:2048}),
+      });
+      if(!response.ok)return send(res,response.status===401?401:response.status===429?429:response.status===503?503:502,{error:response.status===401?'auth':response.status===429?'limited':response.status===503?'busy':'upstream'});
+      const data=await response.json() as {choices?:{message?:{content?:string}}[]};
+      const text=data.choices?.[0]?.message?.content;
+      if(!text?.trim())return send(res,502,{error:'invalid'});
+      if(!res.destroyed)send(res,200,{text,model});
+    }catch(error){
+      const err=error as Error;
+      if(!res.destroyed)send(res,err.name==='TimeoutError'?504:400,{error:err.message==='body_limit'?'body_limit':err.name==='TimeoutError'?'timeout':'upstream'});
+    }finally{res.off('close',disconnect);}
+    return;
+  }
   if (pathname === "/api/agent/plan") {
     if (req.method !== "POST") return send(res, 405, { error: "method" });
     if (req.headers["x-aw-deepseek"] !== "enabled") return send(res, 403, { error: "disabled" });
     if (!key) return send(res, 503, { error: "unconfigured" });
     try {
-      const input = (await body(req)) as { context?: unknown };
-      if (!isContext(input?.context))
+      const input = (await body(req)) as PlanningPacket;
+      const prepared=planningMemory.prepare(input,ADAPTIVE_PROMPT);
+      if (!isContext(prepared.context))
         return send(res, 400, { error: "context" });
-      const context = input.context;
-      const cacheKey = JSON.stringify(context);
+      const context = prepared.context;
+      const cacheKey = JSON.stringify(input);
       let job = pending.get(cacheKey);
       if (!job) {
         const controller = new AbortController();
-        job = { controller, subscribers: 0, promise: plan(context, controller.signal) };
+        job = { controller, subscribers: 0, promise: plan(context,prepared.messages, controller.signal) };
         pending.set(cacheKey, job);
       }
       const current = job;
@@ -208,7 +249,7 @@ const server = createServer(async (req, res) => {
       if (!res.destroyed) send(res, timeout ? 504 : (err.status ?? 400), {
         error: timeout
           ? "timeout"
-          : ["auth", "limited", "invalid", "upstream", "body_limit"].includes(
+          : ["auth", "limited", "busy", "invalid", "upstream", "body_limit", "base_missing"].includes(
                 err.message,
               )
             ? err.message

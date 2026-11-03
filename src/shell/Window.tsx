@@ -1,10 +1,14 @@
+import {LiquidBoundary} from './LiquidBoundary';
+import {LiquidPeel} from './LiquidPeel';
+import {pointer} from '../agent/adaptive/runtime';
+import {DesktopAppIcon} from './DesktopAppIcon';
 import {WindowMenu} from './WindowMenu';
 import {useStore} from '../system/createStore';
 import {DockedCapsules} from './DockedCapsules';
 import {dockParent} from '../agent/adaptive/capsuleTree';
 import {NativeBondSkin} from './NativeBondSkin';
-import {cancelSurfaceInteraction,fuseSurfaces,previewSurfaceFusion,shakeApart,surfaceUi} from './surfaceFusion';
-import {attachedResize,isSurfaceGroup,surfaceBonds,surfaceComponent} from './surfaceBondGeometry';
+import {beginSurfaceSplit,cancelSurfaceInteraction,fuseSurfaces,previewSurfaceFusion,shakeApart,surfaceUi} from './surfaceFusion';
+import {attachedResize,isSurfaceGroup,seamGeometry,surfaceBonds,surfaceComponent} from './surfaceBondGeometry';
 import {TransportSkin} from './TransportSkin';
 import {cancelCapsuleMotion,packWindows,previewCapsuleDrop,finishCapsuleDrop,capsuleDropUi,manualCapsuleWorkArea} from "../agent/adaptive/capsule";
 import {capsuleSize} from '../agent/adaptive/capsuleGeometry';
@@ -23,7 +27,6 @@ import { log } from '../study/logger';
 import { kernel, ui, workArea } from '../system';
 import { MENUBAR } from '../system/kernel';
 import { depthStyle } from '../techniques/depth';
-import { peelGeometry, polyCss, polySvg } from '../techniques/peel';
 import type { Techniques } from '../techniques/techniques';
 import { rerankTrail, scrubTrail } from '../techniques/trail';
 import { capsuleRectFor, type WindowVisual } from '../techniques/visuals';
@@ -32,7 +35,6 @@ import { AgentAttachment, AgentAnchor, SessionCapsule } from './AgentAttachment'
 import type { AgentView, CapsuleSnapshot } from '../agent/adaptive/types';
 import { readingProgress } from '../apps/content';
 
-type Pt = [number, number];
 
 interface Props {
   win: WindowState;
@@ -66,7 +68,7 @@ const Content = memo(
 );
 
 const EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
-const studyDesktop=!(import.meta.env.DEV&&new URLSearchParams(location.search).get('dev')==='1');
+
 
 function snapTarget(x: number, y: number): Rect | null {
   const W = workArea();
@@ -80,23 +82,19 @@ function snapTarget(x: number, y: number): Rect | null {
 
 
 function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) {
-  const fusionPending=useStore(surfaceUi,s=>s.candidate?.a===win.id||s.candidate?.b===win.id);
   const studyMode=useStore(ui,s=>s.studyMode);
+  const studyDesktop=useStore(ui,s=>s.experimentOpen);
   const canCapsule=!studyDesktop||studyMode==='capsule';
   const canFusion=!studyDesktop||studyMode==='fusion';
-  const canShake=studyDesktop&&studyMode==='fusion';
+  const canShake=!studyDesktop||studyMode==='fusion';
   const def = APPS[win.appId];
   const [menuAt,setMenuAt]=useState<{x:number;y:number}|null>(null);
   const closeMenu=useCallback(()=>setMenuAt(null),[]);
-  const [marking,setMarking]=useState(false);
+  const [marking,setMarking]=useState<false|'keep'|'hole'>(false);
   const [markRect,setMarkRect]=useState<Rect|null>(null);
   const [capsuleProposal,setCapsuleProposal]=useState(false);
   const capsule = win.form === 'capsule';
   const rect = capsule ? capsuleRectFor(win, kernel.getState().screen) : win.rect;
-  const [peel, setPeel] = useState<{ corner: Pt; p: Pt; pinned: boolean } | null>(null);
-  const peelAnim = useRef(0);
-  const peelRef = useRef(peel);
-  peelRef.current = peel;
   const ghost = !!win.props.ghost;
   const agentView = win.props.agentView as AgentView | undefined;
   const sessionCapsule = win.props.agentCapsule as CapsuleSnapshot | undefined;
@@ -112,6 +110,25 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     window.addEventListener('keydown',cancel,true);
     return()=>window.removeEventListener('keydown',cancel,true);
   },[marking]);
+  useEffect(()=>{
+    const key=(event:KeyboardEvent)=>{
+      if(kernel.getState().focusedId!==win.id||win.minimized||capsule||win.appId==='experiment')return;
+      if(studyDesktop&&studyMode!=='reveal')return;
+      if(event.repeat||event.ctrlKey||event.metaKey||event.key.toLowerCase()!=='s'||event.shiftKey===event.altKey)return;
+      const target=event.target as HTMLElement|null;
+      if(target?.isContentEditable||target?.closest('input,textarea,select,[contenteditable="true"]'))return;
+      event.preventDefault();event.stopImmediatePropagation();setMarkRect(null);setMarking(event.altKey?'hole':'keep');
+    };
+    window.addEventListener('keydown',key,true);return()=>window.removeEventListener('keydown',key,true);
+  },[win.id,win.minimized,capsule,studyDesktop,studyMode]);
+  const burstImportance=(regionId:string,element:HTMLElement,ownerId=win.id)=>{
+    if(element.dataset.burst)return;
+    element.dataset.burst='true';
+    element.animate([{opacity:1,filter:'blur(0px)',transform:'scale(1)'},{opacity:0,filter:'blur(5px)',transform:'scale(1.1)'}],{duration:240,easing:'cubic-bezier(.16,1,.3,1)',fill:'forwards'}).finished.then(()=>{
+      const owner=kernel.get(ownerId);if(!owner)return;
+      kernel.beginGesture('importance:burst');kernel.setImportance(ownerId,owner.importance.filter(region=>region.id!==regionId));kernel.endGesture();
+    });
+  };
   const startImportance=(event:RPE<HTMLDivElement>)=>{
     if(event.button!==0||!contentRef.current)return;
     event.preventDefault();event.stopPropagation();
@@ -124,9 +141,9 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
       const end=point(e.clientX,e.clientY),x=Math.min(start.x,end.x),y=Math.min(start.y,end.y),w=Math.abs(end.x-start.x),h=Math.abs(end.y-start.y);
       if(w>=24&&h>=24){
         kernel.beginGesture('importance:mark');
-        kernel.setImportance(win.id,[...(kernel.get(win.id)?.importance??[]),{id:`marked:${Date.now()}`,x:x/bounds.width,y:y/bounds.height,w:w/bounds.width,h:h/bounds.height,weight:1,label:'重点区域'}]);
+        kernel.setImportance(win.id,[...(kernel.get(win.id)?.importance??[]),{id:`marked:${Date.now()}`,x:x/bounds.width,y:y/bounds.height,w:w/bounds.width,h:h/bounds.height,weight:1,label:'',...(marking==='hole'?{kind:'hole' as const}:{})}]);
         kernel.endGesture();
-        log({src:'technique',type:'cutout',windowId:win.id,data:{op:'mark'}});
+        log({src:'technique',type:'cutout',windowId:win.id,data:{op:marking}});
       }
       setMarking(false);setMarkRect(null);
     };
@@ -137,7 +154,6 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   const revealed = !!agentView?.revealed && agentExpanded && Number(win.props.agentRevealExit??1)>.0001;
   const revealProgress = revealed ? Number(win.props.agentRevealProgress ?? ((agentMotion?.primitive === "peel" || agentMotion?.concurrent === "peel") ? motionEase((agentMotion.action-.12)/.88) : 1) * Number(win.props.agentRevealExit??1)) : 0;
 
-  useEffect(() => () => cancelAnimationFrame(peelAnim.current), []);
 
   // ── focus / depth pull ────────────────────────────────────────────────────
   const onPointerDownCapture = (e: RPE) => {
@@ -154,9 +170,19 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     kernel.focus(win.id);
   };
 
+  const trySeam=(event:RPE)=>{
+    const state=kernel.getState();
+    for(const bond of surfaceBonds(state.windows[win.id])){
+      const a=state.windows[bond.a],b=state.windows[bond.b];if(!a||!b)continue;
+      const g=seamGeometry(a.rect,b.rect,bond.axis),normal=bond.axis==='x'?event.clientX:event.clientY,along=bond.axis==='x'?event.clientY:event.clientX;
+      if(Math.abs(normal-(g.first+g.second)/2)<=18&&along>=g.lo-12&&along<=g.hi+12){event.preventDefault();event.stopPropagation();beginSurfaceSplit(bond,event.nativeEvent);return true;}
+    }
+    return false;
+  };
   // ── move (group-aware) ────────────────────────────────────────────────────
   const startMove = (e: RPE) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('button,input')) return;
+    if(trySeam(e)||surfaceUi.get().split)return;
     e.preventDefault();
     const sx = e.clientX;
     const sy = e.clientY;
@@ -227,6 +253,8 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
 
   // ── resize ────────────────────────────────────────────────────────────────
   const startResize = (edge: (typeof EDGES)[number]) => (e: RPE) => {
+    if(trySeam(e)||surfaceUi.get().split)return;
+    pointer.kind=edge==='n'||edge==='s'?'ns':edge==='e'||edge==='w'?'ew':edge==='nw'||edge==='se'?'nwse':'nesw';
     e.stopPropagation();
     e.preventDefault();
     kernel.focus(win.id);
@@ -275,57 +303,6 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
     window.addEventListener('blur',up);
   };
 
-  // ── peel ─────────────────────────────────────────────────────────────────
-  const localPt = (cx: number, cy: number): Pt => {
-    const s = visual.depthT.s;
-    return [(cx - visual.vis.x) / s, (cy - visual.vis.y) / s];
-  };
-  const startPeel = (corner: Pt) => (e: RPE) => {
-    e.stopPropagation();
-    e.preventDefault();
-    cancelAnimationFrame(peelAnim.current);
-    kernel.focus(win.id);
-    log({ src: 'technique', type: 'peel', windowId: win.id });
-    setPeel({ corner, p: localPt(e.clientX, e.clientY), pinned: false });
-    const move = (ev: PointerEvent) => setPeel((pp) => (pp ? { ...pp, p: localPt(ev.clientX, ev.clientY) } : pp));
-    const up = (ev: PointerEvent) => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      if (ev.shiftKey) setPeel((pp) => (pp ? { ...pp, pinned: true } : pp));
-      else springBack();
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-  };
-  const springBack = () => {
-    const start = peelRef.current;
-    if (!start) return;
-    const t0 = performance.now();
-    const from = start.p;
-    const step = (now: number) => {
-      const t = Math.min(1, (now - t0) / 280);
-      const k = 1 - Math.pow(1 - t, 3);
-      if (t >= 1) return setPeel(null);
-      setPeel({ ...start, pinned: false, p: [from[0] + (start.corner[0] - from[0]) * k, from[1] + (start.corner[1] - from[1]) * k] });
-      peelAnim.current = requestAnimationFrame(step);
-    };
-    peelAnim.current = requestAnimationFrame(step);
-  };
-  const onAltCorner = (e: RPE) => {
-    if (!tech.peel || !e.altKey || capsule) return;
-    const [lx, ly] = localPt(e.clientX, e.clientY);
-    const corners: Pt[] = [
-      [0, 0],
-      [win.rect.w, 0],
-      [win.rect.w, win.rect.h],
-      [0, win.rect.h],
-    ];
-    const c = corners.find((q) => Math.hypot(q[0] - lx, q[1] - ly) < 110);
-    if (c) startPeel(c)(e);
-  };
-
-  const pg = peel ? peelGeometry(win.rect.w, win.rect.h, peel.corner, peel.p) : null;
-
   // ── wheel depth ───────────────────────────────────────────────────────────
   const onWheel = (e: React.WheelEvent) => {
     if (!tech.depth || !e.altKey) return;
@@ -341,7 +318,7 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   // ── styles ────────────────────────────────────────────────────────────────
   const { s, dx, dy } = visual.depthT;
   const ds = depthStyle(win.depth, xray);
-  const clip = pg ? polyCss(pg.visible) : visual.clipPath;
+  const clip = visual.clipPath;
   const outerStyle: React.CSSProperties = {
     left: rect.x,
     top: rect.y,
@@ -418,19 +395,21 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   const stableStartMove=useCallback((e:RPE)=>moveRef.current(e),[]);
   const resizeHandles=useMemo(()=>EDGES.map(edge=><div key={edge} className={`rz rz-${edge}`} onPointerDown={e=>resizeRef.current(edge)(e)}/>),[]);
   const titleBar=useMemo(()=>(
-          <div className="aw-title" tabIndex={0} aria-label={`窗口标题栏：${win.title}`} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setMenuAt({x:e.clientX,y:e.clientY});}} onKeyDown={e=>{if(e.shiftKey&&e.key==='F10'){e.preventDefault();const r=e.currentTarget.getBoundingClientRect();setMenuAt({x:r.x+80,y:r.y+25});}}} onPointerDown={stableStartMove} onDoubleClick={e => maximizeWithMotion(win.id, workArea(),{x:e.clientX,y:e.clientY})}>
+          <div className="aw-title" tabIndex={0} aria-label={`窗口标题栏：${win.title}`} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setMenuAt({x:e.clientX,y:e.clientY});}} onKeyDown={e=>{if(e.shiftKey&&e.key==='F10'){e.preventDefault();const r=e.currentTarget.getBoundingClientRect();setMenuAt({x:r.x+80,y:r.y+25});}}} onPointerDown={stableStartMove} onDoubleClick={e => {if(!(e.target as HTMLElement).closest('button'))maximizeWithMotion(win.id, workArea(),{x:e.clientX,y:e.clientY});}}>
             <div className="lights">
-              <button className="l close" onClick={() => {cancelSurfaceInteraction();kernel.close(win.id);}} />
-              <button className="l min" onClick={() => kernel.minimize(win.id)} />
-              <button className="l max" onClick={e => maximizeWithMotion(win.id, workArea(),{x:e.clientX,y:e.clientY})} />
+              <button aria-label="关闭" className="l close" onClick={() => {cancelSurfaceInteraction();kernel.close(win.id);}} />
+              <button aria-label="最小化" className="l min" onClick={() => kernel.minimize(win.id)} />
+              <button aria-label="最大化或还原" className="l max" onClick={e => maximizeWithMotion(win.id, workArea(),{x:e.clientX,y:e.clientY})} />
             </div>
             <div className="aw-title-text">
-              <AppIcon appId={win.appId} size={14} />
+              {win.appId==='blank'?null:win.appId==='study'||win.appId==='experiment'||win.appId.startsWith('file-study')||win.appId==='finder'?<DesktopAppIcon id={win.appId==='experiment'||win.appId==='file-study-guide'?'experiment':win.appId==='finder'?'finder':win.appId.startsWith('file-study')?'gallery':({files:'finder',qa:'chat',notes:'writer',browser:'browser',gallery:'gallery'}[String(win.props.resource)]??'writer')}/>:<AppIcon appId={win.appId} size={16}/>}
+
+
               {branchPayload?.parentSnapshot?<span className="agent-title-layers"><span style={{opacity:'calc(1 - var(--agent-title-mix, 1))'}}>{branchPayload.parentSnapshot.title}</span><span style={{opacity:'var(--agent-title-mix, 1)'}}>{win.title}</span></span>:win.title}
             </div>
             <DockedCapsules parentId={win.id}/>
           </div>
-  ),[win.id,win.appId,win.title,win.group,win.capsuleRect,tech,def?.peripheral,branchPayload?.parentSnapshot?.title,stableStartMove]);
+  ),[win.id,win.appId,win.props.resource,win.title,win.group,win.capsuleRect,tech,def?.peripheral,branchPayload?.parentSnapshot?.title,stableStartMove]);
 
   if (capsule) {
     if(dockParent(win)&&kernel.get(dockParent(win)!))return null;
@@ -471,64 +450,43 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   </div>,document.body):null;
   const proposalTarget=proposedCapsuleRect?createPortal(<div className="study-capsule-target" style={{left:proposedCapsuleRect.x,top:proposedCapsuleRect.y,width:proposedCapsuleRect.w,height:proposedCapsuleRect.h}} aria-hidden="true"><AppIcon appId={win.appId} size={17}/><span>{win.title}</span></div>,document.body):null;
   return (
-    <>{menuAt&&<WindowMenu id={win.id} x={menuAt.x} y={menuAt.y} onClose={closeMenu} onMarkImportance={()=>setMarking(true)} onPreviewCapsule={()=>setCapsuleProposal(true)} studyMode={studyDesktop?studyMode:undefined}/>} {receiver}{capsuleGhost}{proposal}{proposalTarget}<div className={cls} style={{ ...outerStyle, ['--agent-title-mix' as string]:titleMix, ['--agent-panel-w' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32)))}px`, ['--agent-reveal' as string]: revealProgress, ['--agent-peel-width' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32))) * revealProgress}px`, ['--agent-peel-height' as string]: `${win.rect.h * .45 * revealProgress}px` }} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive} onPointerDownCapture={onPointerDownCapture} onPointerDown={onAltCorner} onWheel={onWheel}>
+    <>{menuAt&&<WindowMenu id={win.id} x={menuAt.x} y={menuAt.y} onClose={closeMenu} onMarkImportance={()=>setMarking('keep')} onCutHole={()=>setMarking('hole')} onPreviewCapsule={()=>setCapsuleProposal(true)} studyMode={studyDesktop?studyMode:undefined}/>} {receiver}{capsuleGhost}{proposal}{proposalTarget}<div className={cls} style={{ ...outerStyle, ['--agent-title-mix' as string]:titleMix, ['--agent-panel-w' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32)))}px`, ['--agent-reveal' as string]: revealProgress, ['--agent-peel-width' as string]: `${Math.min(300, Math.max(180, win.rect.w * (agentView?.extent ?? .32))) * revealProgress}px`, ['--agent-peel-height' as string]: `${win.rect.h * .45 * revealProgress}px` }} data-win={win.id} data-agent-bond={win.props.agentBond ? String(win.props.agentBond) : undefined} data-agent-branch={win.props.agentBranch ? "true" : undefined} data-agent-motion={agentMotion?.primitive} onPointerDownCapture={onPointerDownCapture} onWheel={onWheel}>
       {!!win.props.agentCollapsePreview&&<div className="collapse-hint">松开预览胶囊布局</div>}
       {!!win.props.agentBond && <div className="agent-bond-skin" aria-hidden="true" />}
       <div className="aw-shell" ref={shellRef} style={shellStyle} data-fluid-skin={deformation?"true":undefined}>
-        {(deformation||surfaceBonds(win).length>0)&&!revealed&&!visual.maskImage&&!visual.dented&&<div className="agent-fluid-material" aria-hidden="true"/>}
+        {deformation&&!revealed&&!visual.maskImage&&!visual.dented&&<div className="agent-fluid-material" aria-hidden="true"/>}
         {agentView && !agentView.revealed && <AgentAttachment view={agentView} motion={agentMotion} expanded={revealed} onToggle={toggleAgent} />}
         <div className="aw-body" style={bodyStyle} ref={bodyRef} onContextMenu={e=>{if((e.target as HTMLElement).closest('input,textarea,[contenteditable="true"]'))return;e.preventDefault();e.stopPropagation();setMenuAt({x:e.clientX,y:e.clientY});}}>
           {titleBar}
           <div className="aw-content" style={deformation?{transform:deformation.contentTransform,willChange:'transform'}:undefined} ref={contentRef} onScrollCapture={(e) => readingProgress.set(win.id, (e.target as HTMLElement).scrollTop)}>
             <Content win={win} peripheral={false} />
-            {win.importance.filter(region=>region.id.startsWith('marked:')).map(region=><div key={region.id} className="study-important-outline" style={{left:`${region.x*100}%`,top:`${region.y*100}%`,width:`${region.w*100}%`,height:`${region.h*100}%`}} aria-hidden="true"/>)}
-            {marking&&<div className="study-mark-layer" onPointerDown={startImportance}><span>拖动框选需要保持可见的区域 · Esc 取消</span>{markRect&&<div className="study-mark-rect" style={{left:markRect.x,top:markRect.y,width:markRect.w,height:markRect.h}}/>}</div>}
+            {win.importance.filter(region=>region.id.startsWith('marked:')&&region.kind!=='hole').map(region=><div key={region.id} className="study-important-outline" style={{left:`${region.x*100}%`,top:`${region.y*100}%`,width:`${region.w*100}%`,height:`${region.h*100}%`}} role="button" tabIndex={0} aria-label="移除重点区域" onPointerDown={e=>e.stopPropagation()} onDoubleClick={e=>{e.stopPropagation();burstImportance(region.id,e.currentTarget);}} onKeyDown={e=>{if(e.key==='Delete'||e.key==='Enter')burstImportance(region.id,e.currentTarget);}}><LiquidBoundary/></div>)}
+            {marking&&<div className="study-mark-layer" onPointerDown={startImportance}><span>{marking==='hole'?'框选扣洞':'框选保留区域'} · Esc 取消</span>{markRect&&<div className="study-mark-rect" style={{left:markRect.x,top:markRect.y,width:markRect.w,height:markRect.h}}/>}</div>}
           </div>
         </div>
         {agentView?.revealed && <RevealSurface id={win.id} view={agentView} width={rect.w} height={rect.h} progress={revealProgress} closure={win.props.agentRevealClosure as RevealClosure|undefined} body={bodyRef} baseClip={clip}/>}
       </div>
 
-      {(surfaceBonds(win).length>0||fusionPending)&&<NativeBondSkin win={win} shell={shellRef} geometry={deformation} baseClip={undefined}/>}
+      {surfaceBonds(win).length>0&&<NativeBondSkin win={win} shell={shellRef} geometry={deformation} baseClip={undefined}/>}
       <TransportSkin width={rect.w} height={rect.h} motion={agentMotion}/>
       {deformation&&<FluidBoundary geometry={deformation} material={false}/>}
 
       {agentView && !agentView.revealed && <AgentAnchor view={agentView} expanded={revealed} onToggle={toggleAgent} />}
-      {visual.holes.map((h, i) => (
+      {visual.holes.map(h => (
         <div
-          key={i}
+          key={`${h.ownerId}:${h.regionId}`}
           className="cut-rim"
           style={{ left: h.rect.x, top: h.rect.y, width: h.rect.w, height: h.rect.h }}
-          title="Click to bring this window forward"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            kernel.focus(h.ownerId);
-          }}
-        >
-          {h.label && <span>{h.label}</span>}
-        </div>
+          role="button" tabIndex={0} aria-label="移除透出区域"
+          onPointerDown={e=>e.stopPropagation()}
+          onDoubleClick={e=>{e.stopPropagation();burstImportance(h.regionId,e.currentTarget,h.ownerId);}}
+          onKeyDown={e=>{if(e.key==='Enter'||e.key==='Delete'){e.preventDefault();e.stopPropagation();burstImportance(h.regionId,e.currentTarget,h.ownerId);}}}
+
+        ><LiquidBoundary/></div>
       ))}
 
-      {pg && (
-        <svg className="peel-flap" width={win.rect.w} height={win.rect.h} onPointerDown={(e) => { if (peel?.pinned) { e.stopPropagation(); springBack(); } }}>
-          <defs>
-            <linearGradient id={`pf-${win.id}`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#f4f6fb" />
-              <stop offset="1" stopColor="#c9d0de" />
-            </linearGradient>
-          </defs>
-          <polygon points={polySvg(pg.flap)} fill={`url(#pf-${win.id})`} stroke="rgba(0,0,0,.12)" style={{ pointerEvents: peel?.pinned ? 'auto' : 'none', cursor: 'pointer' }} />
-          {pg.fold && <line x1={pg.fold[0][0]} y1={pg.fold[0][1]} x2={pg.fold[1][0]} y2={pg.fold[1][1]} stroke="rgba(255,255,255,.9)" strokeWidth="1.5" />}
-        </svg>
-      )}
-
-      {tech.peel && !pg && (
-        <>
-          <div className="dog-ear br" onPointerDown={startPeel([win.rect.w, win.rect.h])} title="Peel back" />
-          <div className="dog-ear bl" onPointerDown={startPeel([0, win.rect.h])} title="Peel back" />
-        </>
-      )}
-
-      {!pg && resizeHandles}
+      <LiquidPeel id={win.id} width={rect.w} height={rect.h} body={bodyRef} enabled={(tech.peel||!!win.props.agentCornerFold)&&!capsule} baseClip={clip}/>
+      {resizeHandles}
     </div></>
   );
 }

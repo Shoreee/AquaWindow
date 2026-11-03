@@ -370,7 +370,7 @@ export function Toasts() {
                 ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) }));
               }}
             >
-              撤回 · Esc
+              撤销
             </button>
           )}
         </div>

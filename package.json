@@ -24,7 +24,14 @@
     "test:fusion": "node scripts/fusion-e2e.mjs",
     "capture:readme": "node scripts/capture-readme.mjs",
     "test:capsule-tree": "node scripts/capsule-tree-e2e.mjs",
-    "test:cursor": "node scripts/cursor-e2e.mjs"
+    "test:cursor": "node scripts/cursor-e2e.mjs",
+    "test:desktop": "node scripts/desktop-system-e2e.mjs",
+    "test:study": "node scripts/study-interactions-e2e.mjs",
+    "test:files": "node scripts/file-studies-e2e.mjs",
+    "test:peel": "node scripts/peel-e2e.mjs",
+    "test:zipper": "node scripts/zipper-e2e.mjs",
+    "test:agent-workspace": "node scripts/agent-workspace-e2e.mjs",
+    "test:agent-native": "node scripts/agent-native-e2e.mjs"
   },
   "dependencies": {
     "pdfjs-dist": "^6.4.299",

@@ -42,7 +42,7 @@ export const rectEq = (a: Rect, b: Rect, eps = 0.5) =>
   Math.abs(a.x - b.x) < eps && Math.abs(a.y - b.y) < eps && Math.abs(a.w - b.w) < eps && Math.abs(a.h - b.h) < eps;
 
 /** Title bar height of a normal window; importance regions live in the content box below it. */
-export const TITLEBAR = 38;
+export const TITLEBAR = 42;
 
 export function contentBox(r: Rect): Rect {
   return { x: r.x, y: r.y + TITLEBAR, w: r.w, h: Math.max(0, r.h - TITLEBAR) };

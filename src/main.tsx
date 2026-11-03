@@ -1,15 +1,18 @@
+import {agentDiagnostics} from './agent/adaptive/diagnostics';
 import { createRoot } from 'react-dom/client';
 import './styles/base.css';
 import './styles/shell.css';
 import './styles/apps.css';
 import './styles/agent.css';
+import './styles/system.css';
 import { agent, kernel, ui } from './system';
 import { loadScenario } from './scenarios/director';
 import { bootDesktop } from './shell/SystemChrome';
-import { adaptation, planBuffer } from './agent/adaptive/runtime';
+import { adaptation, planBuffer,workspaceModel } from './agent/adaptive/runtime';
 import { Desktop } from './shell/Desktop';
+import {selectStudyMode} from './study/conditions';
 
-if (import.meta.env.DEV) (window as unknown as { __aw: unknown }).__aw = { kernel, agent, ui, adaptation, planBuffer };
+if (import.meta.env.DEV) (window as unknown as { __aw: unknown }).__aw = { kernel, agent, ui, adaptation, planBuffer,workspaceModel,agentDiagnostics,selectStudyMode };
 
 createRoot(document.getElementById('root')!).render(<Desktop />);
 

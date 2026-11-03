@@ -2,6 +2,9 @@ import type { KernelState, Rect, WindowState } from "../../kernel/types";
 
 export type Edge = "left" | "right" | "top" | "bottom";
 export type Primitive =
+  | "fuse"
+  | "corner-peel"
+  | "region"
   | "arrange"
   | "anchor"
   | "peel"
@@ -15,9 +18,15 @@ export interface Source {
   windowId: string;
   title: string;
   text: string;
-  kind: "paper" | "table" | "note" | "file";
+  kind: "paper" | "table" | "note" | "file" | "ui" | "web" | "image";
 }
+export type FoldSpec={corner:'top-left'|'top-right'|'bottom-left'|'bottom-right';amount:number};
 export interface ContextWindow {
+  group?:string;
+  fold?:FoldSpec;
+  content?:import('./observations').AppObservation;
+  regions?:import('../../kernel/types').ImportanceRegion[];
+  capabilities?:string[];
   id: string;
   app: string;
   title: string;
@@ -30,10 +39,11 @@ export interface ContextWindow {
   scroll: number;
 }
 export interface AgentContext {
+  workspace?: import('./workspace').WorkspaceSummary;
   version: 1;
   key: string;
   semanticKey: string;
-  task: "papers" | "files";
+  task: "papers" | "files" | "workspace";
   selectedIds: string[];
   focusedId: string | null;
   work: Rect;
@@ -44,7 +54,10 @@ export interface AgentContext {
 }
 type TargetStep = { targets: string[] };
 export type PrimitiveStep =
-  | (TargetStep & { type: "arrange"; layout: "compare" | "focus" })
+  | (TargetStep & {type:'fuse';movingId:string;fixedId:string})
+  | (TargetStep & {type:'corner-peel';corner:FoldSpec['corner'];amount:number})
+  | (TargetStep & {type:'region';mode:'preserve'|'hole';regionId:string})
+  | (TargetStep & { type: "arrange"; layout: "compare" | "focus"; axis?:'x'|'y';weights?:number[];order?:string[];anchorId?:string;share?:number })
   | (TargetStep & { type: "anchor"; edge: Edge; artifactIds: string[] })
   | (TargetStep & {
       type: "peel";
@@ -74,6 +87,7 @@ export interface Artifact {
   sourceIds: string[];
 }
 export interface AgentPlan {
+  origin?: 'local'|'deepseek';
   id: string;
   title: string;
   rationale: string;
@@ -85,6 +99,8 @@ export interface AgentPlan {
   artifacts: Artifact[];
 }
 export interface PlanBuffer {
+  referenceId?:string;
+  wireContext?:AgentContext;
   context: AgentContext;
   plans: AgentPlan[];
   generatedAt: number;
@@ -132,6 +148,9 @@ export interface CompiledPlan {
   plan: AgentPlan;
 }
 export const PRIMITIVE_LABELS: Record<Primitive, string> = {
+  fuse:"融合",
+  'corner-peel':"掀角",
+  region:"区域透出",
   arrange: "移位",
   anchor: "锚附",
   peel: "揭示",

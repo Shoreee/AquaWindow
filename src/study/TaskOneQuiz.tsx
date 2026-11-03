@@ -1,5 +1,7 @@
+import {useEffect} from 'react';
 import {createStore,useStore} from '../system/createStore';
 import {kernel} from '../system/kernel';
+import {log} from './logger';
 
 const questions=[
   {text:'根据方法论，负责理解输入序列并生成特征表示的部分，在架构图中位于哪一侧？',options:['左侧','右侧','最上方','最下方'],answer:0},
@@ -14,15 +16,16 @@ const quizStore=createStore({answers:emptyAnswers(),submitted:false});
 const reset=()=>quizStore.set({answers:emptyAnswers(),submitted:false});
 kernel.onEvent(event=>{if(event.type==='reset')reset();});
 
-export function TaskOneQuiz(){
+export function TaskOneQuiz({onSubmitted}:{onSubmitted?:(done:boolean)=>void}){
   const {answers,submitted}=useStore(quizStore,state=>state);
+  useEffect(()=>onSubmitted?.(submitted),[submitted,onSubmitted]);
   const answered=answers.filter(answer=>answer!==null).length;
   const score=answers.filter((answer,index)=>answer===questions[index].answer).length;
-  return <section className="study-quiz" aria-label="Transformer 图文理解测试">
-    <h3>Transformer 图文理解测试</h3>
-    <p>6 道单选题 · 建议限时 5–7 分钟</p>
+  return <section className="study-quiz" aria-label="图文理解">
+    <h3>图文理解</h3>
+
     <p className="study-quiz-progress" aria-live="polite">{answered}/6 已答</p>
-    <form onSubmit={event=>{event.preventDefault();if(answered===questions.length)quizStore.set({submitted:true});}}>
+    <form onSubmit={event=>{event.preventDefault();if(answered===questions.length){quizStore.set({submitted:true});log({src:'study',type:'quiz.submit',data:{score,total:questions.length}});onSubmitted?.(true);}}}>
       {questions.map((question,index)=><fieldset key={question.text} disabled={submitted}>
         <legend>{index+1}. {question.text}</legend>
         {question.options.map((option,choice)=><label key={option} className={answers[index]===choice?'selected':''}>
@@ -33,8 +36,8 @@ export function TaskOneQuiz(){
       </fieldset>)}
       {submitted&&<p className="study-quiz-result" role="status">成绩：{score}/6 题正确</p>}
       <div className="study-quiz-actions">
-        <button type="submit" disabled={answered!==questions.length||submitted}>提交并查看成绩</button>
-        <button type="button" onClick={reset}>重做</button>
+        <button type="submit" disabled={answered!==questions.length||submitted}>提交答案</button>
+        <button type="button" onClick={()=>{reset();onSubmitted?.(false);}}>重做</button>
       </div>
     </form>
   </section>;
