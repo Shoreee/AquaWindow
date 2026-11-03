@@ -31,7 +31,7 @@ export function WindowMenu({id,x,y,onClose,onMarkImportance,onCutHole,onPreviewC
   {(studyMode===undefined||studyMode==='reveal')&&<button role="menuitem" onClick={action(onMarkImportance)}>框选保留区域 <kbd>Shift S</kbd></button>}
   {(studyMode===undefined||studyMode==='reveal')&&<button role="menuitem" onClick={action(onCutHole)}>框选扣洞 <kbd>Alt S</kbd></button>}
   {(studyMode===undefined||studyMode==='reveal')&&w.importance.length>0&&<button role="menuitem" onClick={action(()=>{kernel.beginGesture('importance:clear');kernel.setImportance(id,[]);kernel.endGesture();})}>清除区域</button>}
-  {(studyMode===undefined||studyMode==='fusion')&&(isSurfaceGroup(w.group)?<button role="menuitem" onClick={action(()=>{const bond=surfaceBonds(kernel.get(id))[0];if(bond)document.querySelector<SVGElement>(`[data-surface-bond="${CSS.escape(bond.id)}"] .surface-seam-hit`)?.focus();})}>定位分离接缝</button>:<button role="menuitem" disabled={!related} onClick={action(()=>{if(related)fuseSurfaces(id,related);})}>与相邻窗口融合</button>)}
+  {(studyMode===undefined||(studyMode==='fusion'||studyMode==='sync-scroll'))&&(isSurfaceGroup(w.group)?<button role="menuitem" onClick={action(()=>{const bond=surfaceBonds(kernel.get(id))[0];if(bond)document.querySelector<SVGElement>(`[data-surface-bond="${CSS.escape(bond.id)}"] .surface-seam-hit`)?.focus();})}>定位分离接缝</button>:<button role="menuitem" disabled={!related} onClick={action(()=>{if(related)fuseSurfaces(id,related);})}>与相邻窗口融合</button>)}
   <button role="menuitem" onClick={action(()=>duplicateWindow(id))}>复制窗口</button>
   <button role="menuitem" onClick={action(()=>maximizeWithMotion(id,workArea()))}>{w.maximized?'还原大小':'最大化'}</button>
   <div className="window-menu-divider"/>

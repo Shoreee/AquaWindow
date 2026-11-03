@@ -5,6 +5,11 @@ import type {StudyTaskId} from './tasks';
 
 export type GalleryCapture={id:string;url:string;title:string;taskId:StudyTaskId;sourceId:string;createdAt:number};
 export const galleryStore=createStore<{items:GalleryCapture[]}>({items:[]});
+export function galleryDropImage(data:DataTransfer){
+  const item=galleryStore.get().items.find(item=>item.id===data.getData('application/x-aquawindow-capture'));
+  return item?{url:item.url,name:item.title}:null;
+}
+export function dragGalleryCapture(data:DataTransfer,id:string){data.setData('application/x-aquawindow-capture',id);data.effectAllowed='copy';}
 kernel.onEvent(event=>{
   if(event.type!=='reset')return;
   for(const item of galleryStore.get().items)URL.revokeObjectURL(item.url);

@@ -1,3 +1,4 @@
+import StudyNotes,{copyStudyNotesState} from './StudyNotes';
 import {observeApp} from '../agent/adaptive/observations';
 import {useEffect} from 'react';
 import type {WindowState} from '../kernel/types';
@@ -8,16 +9,13 @@ import { studyTasks, studyTaskStore, type StudyTaskId } from '../study/tasks';
 import StudyPdf,{copyStudyPdfState} from './StudyPdf';
 import StudyQa,{copyStudyQaState} from './StudyQa';
 import StudyBrowser,{copyStudyBrowserState} from './StudyBrowser';
-import {galleryStore,openGalleryCapture} from '../study/gallery';
+import {galleryStore,openGalleryCapture,dragGalleryCapture} from '../study/gallery';
 
-const noteState=new Map<string,string>();
-kernel.onEvent(event=>{if(event.type==='reset')noteState.clear();});
 export function copyStudyMaterialState(sourceId:string,copyId:string){
   copyStudyPdfState(sourceId,copyId);
   copyStudyBrowserState(sourceId,copyId);
   copyStudyQaState(sourceId,copyId);
-  const note=noteState.get(sourceId);
-  if(note!==undefined)noteState.set(copyId,note);
+  copyStudyNotesState(sourceId,copyId);
 }
 
 export function openStudyResource(resource:string,title?:string){
@@ -44,7 +42,7 @@ function StudyGallery({windowId}:{windowId:string}){
   useEffect(()=>{observeApp(windowId,{title:'图库',kind:'gallery',availability:items.length?'metadata-only':'empty',text:items.length?items.map(item=>`${item.title}（来源窗口：${item.sourceId}）`).join('\n'):'图库为空，没有截图。'});},[windowId,items]);
   return <div className="study-gallery">
     <h2>图库</h2>
-    {items.length===0?<p>还没有截图。打开论文后按 Ctrl+Shift+S 框选，截图会保存在这里。</p>:<div className="study-gallery-grid">{items.map(item=><button key={item.id} type="button" onClick={()=>openGalleryCapture(item.id)} aria-label={`打开${item.title}`}><img src={item.url} alt=""/><span>{item.title}</span></button>)}</div>}
+    {items.length===0?<p>还没有截图。打开论文后按 Ctrl+Shift+S 框选，截图会保存在这里。</p>:<div className="study-gallery-grid">{items.map(item=><button key={item.id} type="button" draggable onDragStart={event=>dragGalleryCapture(event.dataTransfer,item.id)} onClick={()=>openGalleryCapture(item.id)} aria-label={`打开${item.title}`}><img src={item.url} alt="" draggable={false}/><span>{item.title}</span></button>)}</div>}
   </div>;
 }
 
@@ -66,11 +64,11 @@ export default function StudyMaterials({win}:{win:WindowState}){
   const resource=String(win.props.resource??'pdf');
   if(liveForm==='capsule'&&win.form==='normal')return <div className="study-capsule-thumbnail"><span>{resource==='pdf'?'PDF':resource==='browser'?'网页':'材料'}</span><strong>{win.title}</strong></div>;
   if(resource==='files')return <StudyFiles windowId={win.id} resources={resources}/>;
-  if(resource==='notes')return <div className="study-notes" contentEditable suppressContentEditableWarning aria-label="实验笔记" ref={element=>{if(element&&!element.dataset.initialized){element.textContent=noteState.get(win.id)??'';element.dataset.initialized='true';observeApp(win.id,{kind:'note',availability:'content',title:win.title,documentId:win.id,text:element.textContent??'',editable:true});}}} onInput={event=>{const text=event.currentTarget.textContent??'';noteState.set(win.id,text);observeApp(win.id,{kind:'note',availability:'content',title:win.title,documentId:win.id,text,editable:true});}}/>;
+  if(resource==='notes')return <StudyNotes windowId={win.id}/>;
   if(resource==='qa')return <StudyQa windowId={win.id} example={ui.get().experimentOpen?studyTasks[taskId].qaExample:undefined}/>;
   if(resource==='browser')return <StudyBrowser windowId={win.id}/>;
   if(resource==='gallery')return <StudyGallery windowId={win.id}/>;
-  if(resource==='capture')return <div className="study-captured-image"><img src={String(win.props.imageUrl??'')} alt="论文截图"/></div>;
+  if(resource==='capture')return <div className="study-captured-image"><img src={String(win.props.imageUrl??'')} alt="论文截图" draggable onDragStart={event=>dragGalleryCapture(event.dataTransfer,String(win.props.captureId??''))}/></div>;
   const item=resources.find(entry=>entry.id===resource);
   if(!item)return null;
   if(item.kind==='pdf')return <StudyPdf windowId={win.id} url={item.url} title={item.title} focused={focused}/>;

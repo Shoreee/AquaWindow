@@ -1,3 +1,4 @@
+import {syncFusedPdfScroll} from '../study/syncScroll';
 import {observeApp} from '../agent/adaptive/observations';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {getDocument,GlobalWorkerOptions,type PDFDocumentProxy} from 'pdfjs-dist';
@@ -120,6 +121,7 @@ export default function StudyPdf({windowId,url,title,focused}:{windowId:string;u
     savedScroll.current=host.current.scrollTop*next/zoom;setZoom(next);
   };
   const onScroll=(element:HTMLDivElement)=>{
+    if(!restoringScroll.current)syncFusedPdfScroll(windowId,element);
     const pages=element.querySelectorAll<HTMLElement>('.study-pdf-page');let visible=1;
     const line=element.getBoundingClientRect().top+element.clientHeight*.35;
     for(const page of pages){if(page.getBoundingClientRect().top<=line)visible=Number(page.dataset.page);else break;}

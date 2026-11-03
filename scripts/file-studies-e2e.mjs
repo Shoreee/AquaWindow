@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {admitTestParticipant} from './experiment-fixture.mjs';
 import {readFile} from 'node:fs/promises';
 import {chromium} from 'playwright-core';
 const browser=await chromium.launch({channel:process.env.AW_BROWSER??'chrome',headless:true});
@@ -10,7 +11,7 @@ try{
   const pdfId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'原桌面论文',rect:{x:150,y:80,w:650,h:680},props:{resource:'pdf',taskId:'comparison'}}));
   await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page canvas`)?.style.visibility==='visible',pdfId);
   await page.locator(`[data-win="${pdfId}"] .study-pdf-scroll`).evaluate(el=>{el.scrollTop=410});
-  await page.getByRole('button',{name:'打开实验',exact:true}).click();await page.getByRole('textbox',{name:'参与者编号'}).fill('P01');
+  await page.getByRole('button',{name:'打开实验',exact:true}).click();await admitTestParticipant(page);
   await page.locator('.experiment-worlds').getByRole('button',{name:/文件管理/}).click();
   const orders=[];
   for(let index=0;index<3;index++){

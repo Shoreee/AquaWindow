@@ -36,8 +36,8 @@ export const studyTasks: Record<StudyTaskId, {
     label: '截图转移',
     switchLabel: '截图转移',
     title: '截图转移',
-    description: '目标图像是《Attention Is All You Need》中文版第 3 页的图 1：Transformer 模型架构图。',
-    steps: ['从“文件”打开中文版论文，找到图 1。', '截取该图，粘贴或拖入 AI 问答窗口，再切回论文原来的阅读位置。'],
+    description: '把 Transformer 模型架构图同时放入笔记和 AI 问答输入区，再回到主论文原先的阅读位置。目标是中文版第 3 页的图 1。',
+    steps: ['从文件打开论文，找到图 1；从任务栏打开笔记和 AI 问答。', '截取完整架构图，将同一张截图分别放入笔记和 AI 问答输入区，无需发送。可从图库将截图分别拖入两个窗口。', '确认两处均已显示截图，通过普通窗口切换回主论文原先的阅读位置。'],
     resources: [attentionZh],
   },
   bilingual: {
@@ -45,7 +45,7 @@ export const studyTasks: Record<StudyTaskId, {
     switchLabel: '中英对照',
     title: '临时中英对照',
     description: '阅读中文版论文时，遇到表达不清的地方，临时查看英文原文，再回到刚才的中文阅读位置。',
-    steps: ['从“文件”打开中文版和英文版论文。', '在两个窗口之间切换或并排对照，保持各自的阅读位置。'],
+    steps: ['从文件打开中文版和英文版论文。', '并排查看对应词句，再回到中文阅读位置。', '选择融合后同步滚动时，将两个 PDF 窗口左右融合，滚动左侧即可带动右侧。'],
     resources: [
       { id: 'chinese-pdf', title: 'Attention Is All You Need 中文版.pdf', url: attentionRoot + 'Attention-Is-All-You-Need-zh.pdf', kind: 'pdf' },
       { id: 'english-pdf', title: 'Attention Is All You Need 英文版.pdf', url: attentionRoot + 'Attention-Is-All-You-Need-en.pdf', kind: 'pdf' },

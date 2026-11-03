@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import type { WindowRole, WindowState } from '../kernel/types';
 import Browser from './Browser';
 import Experiment from './Experiment';
+import LearningCard from './LearningCard';
 import EmptyWindow from './EmptyWindow';
 import StudyMaterials from './StudyMaterials';
 import FileStudyDocument from './FileStudyDocument';
@@ -33,6 +34,7 @@ export interface AppDef {
 }
 
 export const APPS: Record<string, AppDef> = {
+  'learning-card':{id:'learning-card',name:'练习材料',Component:LearningCard,size:{w:440,h:570},role:'reference'},
   experiment:{id:'experiment',name:'实验',Component:Experiment,size:{w:400,h:640},role:'tool'},
   study: { id: 'study', name: '论文材料', Component: StudyMaterials, size: { w: 660, h: 620 }, role: 'reference' },
   'file-study': {id:'file-study',name:'文件材料',Component:FileStudyDocument,size:{w:620,h:700},role:'reference'},
