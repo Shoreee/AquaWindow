@@ -11,8 +11,8 @@ try{
  await page.getByRole('button',{name:'进入掌握效果测试'}).click();
  await page.getByRole('button',{name:'跳过掌握测试'}).click();
  await page.getByRole('button',{name:/论文阅读/}).click();
- assert.deepEqual(await page.evaluate(async()=>{const m=await import('/src/study/flow.ts');return m.paperLevels}),['comparison','screenshot','bilingual','external','answer']);
- await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('2');
+ assert.deepEqual(await page.evaluate(async()=>{const m=await import('/src/study/flow.ts');return m.paperLevels}),['comparison','bilingual','external','answer']);
+ await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('1');
  await page.getByRole('button',{name:'开始答题'}).click();
  await page.evaluate(async()=>{const m=await import('/src/apps/StudyMaterials.tsx');m.openStudyResource('english-pdf');});
  const reader=page.locator('.aw-win').filter({has:page.locator('.study-pdf-text-layer')}).last();
@@ -24,7 +24,7 @@ try{
  await page.getByRole('textbox',{name:'对应英文原文'}).fill(expected);
  await page.getByRole('button',{name:'提交英文原文'}).click();
  assert.equal(await page.getByRole('button',{name:'下一题'}).isDisabled(),false);
- await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('3');
+ await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('2');
  const task=await page.evaluate(async()=>{const m=await import('/src/study/tasks.ts');return m.studyTasks.external});
  assert.ok(task.resources.some(item=>item.id==='bahdanau'));
  await page.evaluate(async()=>{const m=await import('/src/apps/StudyMaterials.tsx');m.openStudyResource('browser');});

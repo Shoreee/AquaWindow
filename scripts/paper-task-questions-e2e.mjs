@@ -12,7 +12,7 @@ try{
   await page.getByRole('button',{name:'跳过掌握测试'}).click();
   await page.getByRole('button',{name:/论文阅读/}).click();
 
-  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('3');
+  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('2');
   await page.getByRole('button',{name:'开始答题'}).click();
   assert.equal(await page.getByRole('button',{name:'下一题'}).isDisabled(),true);
   const board=page.locator('.study-matching-board');
@@ -24,7 +24,7 @@ try{
   await page.getByRole('button',{name:'提交连线'}).click();
   assert.equal(await page.getByRole('button',{name:'下一题'}).isDisabled(),false);
 
-  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('4');
+  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('3');
   await page.getByRole('button',{name:'开始答题'}).click();
   assert.equal(await page.getByRole('button',{name:'下一题'}).isDisabled(),true);
   await page.evaluate(async()=>{const m=await import('/src/apps/StudyMaterials.tsx');m.openStudyResource('qa');});

@@ -15,7 +15,7 @@ export default function Experiment(){
  const enrollment=useStore(onboarding,s=>s);
  const [showManager,setShowManager]=useState(false);
  useEffect(()=>{if(enrollment.stage==='ready')activateParticipant(enrollment.studentId);},[enrollment.stage,enrollment.studentId]);
- if(enrollment.stage!=='ready')return <ExperimentOnboarding/>;
+ if(enrollment.stage!=='ready')return showManager?<ExperimentManager onClose={()=>setShowManager(false)}/>:<ExperimentOnboarding onOpenManager={()=>setShowManager(true)}/>;
  if(showManager&&flow.view==='hub')return <ExperimentManager onClose={()=>setShowManager(false)}/>;
  if(flow.view==='hub')return <div className="experiment-app experiment-hub"><h1>选择实验</h1><p>{enrollment.testMode?'测试模式 · 不计入正式数据':`${enrollment.name} · ${enrollment.studentId}`}</p><div className="experiment-worlds">
   <button onClick={()=>chooseExperiment('paper')}><DesktopAppIcon id="writer"/><strong>论文阅读</strong><span>{flow.levels.paper>=paperLevels.length?'已完成':flow.levels.paper?`继续第 ${flow.levels.paper+1} 题`:'阅读、对照与返回'}</span></button>

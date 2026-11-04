@@ -1,7 +1,7 @@
 import { createStore } from '../system/createStore';
 import { kernel } from '../system/kernel';
 
-export type StudyTaskId = 'comparison' | 'screenshot' | 'bilingual' | 'external' | 'answer';
+export type StudyTaskId = 'comparison' | 'bilingual' | 'external' | 'answer';
 export type StudyResource = { id: string; title: string; url: string; kind: 'pdf' | 'image' };
 export type StudyAnswerExample = { question: string; sentences: string[]; requireImage?: boolean };
 
@@ -32,14 +32,6 @@ export const studyTasks: Record<StudyTaskId, {
       { id: 'appendix-reference', title: '正文提及附录部分.png', url: studyRoot + 'attention-zh/appendix-reference.png', kind: 'image' },
       { id: 'appendix', title: '附录图3 注意力可视化.png', url: studyRoot + 'attention-zh/appendix-visualization.png', kind: 'image' },
     ],
-  },
-  screenshot: {
-    label: '截图转移',
-    switchLabel: '截图转移',
-    title: '截图转移',
-    description: '把 Transformer 模型架构图同时放入笔记和 AI 问答输入区，再回到主论文原先的阅读位置。目标是中文版第 3 页的图 1。',
-    steps: ['从文件打开论文，找到图 1；从任务栏打开笔记和 AI 问答。', '截取完整架构图，将同一张截图分别放入笔记和 AI 问答输入区，无需发送。可从图库将截图分别拖入两个窗口。', '确认两处均已显示截图，通过普通窗口切换回主论文原先的阅读位置。'],
-    resources: [attentionZh],
   },
   bilingual: {
     label: '中英对照',

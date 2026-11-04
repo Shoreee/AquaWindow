@@ -12,18 +12,20 @@ try{
  await page.getByRole('button',{name:'跳过掌握测试'}).click();
  assert.match(await page.locator('.experiment-hub').innerText(),/测试模式/);
  await page.getByRole('button',{name:/论文阅读/}).click();
- await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('4');
- assert.deepEqual(await page.evaluate(async()=>{const f=await import('/src/study/flow.ts'),t=await import('/src/study/tasks.ts');return [f.experimentFlow.get().levels.paper,t.studyTaskStore.get().current,f.experimentFlow.get().stageRunning]}),[4,'answer',false]);
+ await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('3');
+ assert.deepEqual(await page.evaluate(async()=>{const f=await import('/src/study/flow.ts'),t=await import('/src/study/tasks.ts');return [f.experimentFlow.get().levels.paper,t.studyTaskStore.get().current,f.experimentFlow.get().stageRunning]}),[3,'answer',false]);
  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('1');
  await page.getByRole('button',{name:'开始答题'}).click();
  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('2');
- assert.deepEqual(await page.evaluate(async()=>{const f=await import('/src/study/flow.ts'),t=await import('/src/study/tasks.ts');return [f.experimentFlow.get().levels.paper,t.studyTaskStore.get().current,f.experimentFlow.get().stageRunning]}),[2,'bilingual',false]);
+ assert.deepEqual(await page.evaluate(async()=>{const f=await import('/src/study/flow.ts'),t=await import('/src/study/tasks.ts');return [f.experimentFlow.get().levels.paper,t.studyTaskStore.get().current,f.experimentFlow.get().stageRunning]}),[2,'external',false]);
  await page.getByRole('button',{name:'返回实验'}).click();
  await page.getByRole('button',{name:/文件管理/}).click();
  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('2');
  assert.deepEqual(await page.evaluate(async()=>{const f=await import('/src/study/flow.ts'),w=await import('/src/study/workspaces.ts');return [f.experimentFlow.get().levels.files,w.fileTaskStore.get().current]}),[2,'task3']);
  await page.evaluate(async()=>{const w=await import('/src/study/workspaces.ts'),f=await import('/src/study/flow.ts');w.startFileTask();w.submitFileDocument('task3-a');f.finishLevel(false);});
  const saved=await page.evaluate(()=>({assignments:localStorage.getItem('aquawindow.experiment.assignments.v1'),records:localStorage.getItem('aquawindow.experiment.records.v1'),skips:localStorage.getItem('aquawindow.experiment.learning-skips.v1'),files:localStorage.getItem('aquawindow.file-studies.results.v1')}));
- assert.deepEqual(saved,{assignments:null,records:null,skips:null,files:null});
+ assert.equal(JSON.parse(saved.assignments).length,7);
+ assert.ok(JSON.parse(saved.assignments).every(person=>person.pending));
+ assert.deepEqual({records:saved.records,skips:saved.skips,files:saved.files},{records:null,skips:null,files:null});
  console.log('PASS: profile skip enters test mode, paper and file tasks switch freely, formal data remains clean');
 }finally{await browser.close();}

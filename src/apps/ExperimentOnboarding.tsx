@@ -6,7 +6,7 @@ import {onboarding,registerParticipant,skipParticipantInfo,learningQuestions,sta
 import {studyInteractionModes,type StudyInteractionModeId} from '../study/interactionModes';
 import {selectStudyMode} from '../study/conditions';
 
-export default function ExperimentOnboarding(){
+export default function ExperimentOnboarding({onOpenManager}:{onOpenManager:()=>void}){
  const state=useStore(onboarding,s=>s),mode=useStore(ui,s=>s.studyMode);
  const [name,setName]=useState(state.name),[studentId,setStudentId]=useState(state.studentId),[answer,setAnswer]=useState(''),[message,setMessage]=useState('');
  useEffect(()=>{setAnswer('');setMessage('');},[state.question,state.stage]);
@@ -16,7 +16,7 @@ export default function ExperimentOnboarding(){
   <label>学号<input aria-label="学号" required autoComplete="off" value={studentId} onChange={event=>setStudentId(event.target.value)}/></label>
   <button className="experiment-primary" disabled={!name.trim()||!studentId.trim()}>进入教学</button>
   <button className="experiment-skip-test" type="button" onClick={skipParticipantInfo}>跳过信息录入（测试）</button>
- </form></div>;
+  </form><button className="experiment-skip-test" type="button" onClick={onOpenManager}>实验管理</button></div>;
  if(state.stage==='practice')return <div className="experiment-app experiment-onboarding-screen"><h1>交互练习</h1><p>打开材料窗口，选择交互方式进行练习。</p>
   <label className="experiment-condition">交互方式<select aria-label="练习交互方式" value={mode??''} onChange={event=>selectStudyMode((event.target.value||null) as StudyInteractionModeId|null)}><option value="">普通窗口</option>{studyInteractionModes.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
   {mode&&<p>{studyInteractionModes.find(item=>item.id===mode)?.description}</p>}

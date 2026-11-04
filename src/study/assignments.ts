@@ -6,8 +6,10 @@ import type {FileLayoutMode} from './workspaces';
 
 export type AssignedPaperMode=StudyInteractionModeId|'standard';
 export interface ParticipantAssignment{
+ slotId:string;
  studentId:string;
  name:string;
+ pending:boolean;
  group:number;
  paper:Record<StudyTaskId,AssignedPaperMode>;
  files:Record<FileTaskId,FileLayoutMode>;
@@ -18,9 +20,11 @@ const storageKey='aquawindow.experiment.assignments.v1';
 const eligibilityKey='aquawindow.experiment.eligibility.v1';
 export const paperTaskIds=Object.keys(studyTasks) as StudyTaskId[];
 export const fileTaskIds=STUDY_TASKS.map(task=>task.id);
+export const plannedParticipantCount=paperTaskIds.length+fileTaskIds.length;
 export const paperModeOptions=[{id:'standard' as const,label:'普通窗口'},...studyInteractionModes];
 const fileModeOptions=['parallel','primary-secondary'] as const;
 export type Eligibility={paper:Record<StudyTaskId,AssignedPaperMode[]>;files:Record<FileTaskId,FileLayoutMode[]>};
+const rotation=(group:number,taskIndex:number,count:number)=>(group-1+taskIndex)%count;
 function loadEligibility():Eligibility{
  let saved:Partial<Eligibility>={};try{saved=JSON.parse(localStorage.getItem(eligibilityKey)??'{}')}catch{/* Use all available forms. */}
  const paper=Object.fromEntries(paperTaskIds.map(task=>[task,(saved.paper?.[task]??[]).filter(mode=>paperModeOptions.some(option=>option.id===mode))])) as Eligibility['paper'];
@@ -30,32 +34,49 @@ function loadEligibility():Eligibility{
  return {paper,files};
 }
 
-function loadAssignments():ParticipantAssignment[]{
+function assignmentForGroup(group:number,eligibility:Eligibility){
+ const paper=Object.fromEntries(paperTaskIds.map((task,index)=>{const choices=eligibility.paper[task];return [task,choices[rotation(group,index,choices.length)]]})) as ParticipantAssignment['paper'];
+ const files=Object.fromEntries(fileTaskIds.map((task,index)=>{const choices=eligibility.files[task];return [task,choices[rotation(group,index,choices.length)]]})) as ParticipantAssignment['files'];
+ return {paper,files};
+}
+function makePendingSlot(group:number,eligibility:Eligibility):ParticipantAssignment{
+ return {slotId:`slot-${group}`,studentId:'',name:'',pending:true,group,...assignmentForGroup(group,eligibility),createdAt:new Date().toISOString()};
+}
+function loadAssignments(eligibility:Eligibility):ParticipantAssignment[]{
  try{
   const value=JSON.parse(localStorage.getItem(storageKey)??'[]');
-  return Array.isArray(value)?value.filter(item=>item&&typeof item.studentId==='string'&&item.paper&&item.files).map((item:ParticipantAssignment)=>({
-   ...item,
-   paper:Object.fromEntries(paperTaskIds.map((task,index)=>[task,paperModeOptions.some(option=>option.id===item.paper[task])?item.paper[task]:paperModeOptions[(item.group-1+index)%paperModeOptions.length].id])) as ParticipantAssignment['paper'],
-   files:Object.fromEntries(fileTaskIds.map((task,index)=>[task,fileModeOptions.includes(item.files[task])?item.files[task]:fileModeOptions[(item.group-1+index)%fileModeOptions.length]])) as ParticipantAssignment['files'],
-  })):[];
- }catch{return []}
+  const participants:ParticipantAssignment[]=Array.isArray(value)?value.filter(item=>item&&typeof item.studentId==='string'&&item.paper&&item.files).map((item:ParticipantAssignment,index:number)=>{
+   const group=Number.isInteger(item.group)&&item.group>0?item.group:index+1;
+   return {...item,slotId:item.slotId||`slot-${index+1}`,pending:item.pending===true||!item.studentId.trim(),group,
+    paper:Object.fromEntries(paperTaskIds.map((task,taskIndex)=>[task,paperModeOptions.some(option=>option.id===item.paper[task])?item.paper[task]:paperModeOptions[rotation(group,taskIndex,paperModeOptions.length)].id])) as ParticipantAssignment['paper'],
+    files:Object.fromEntries(fileTaskIds.map((task,taskIndex)=>[task,fileModeOptions.includes(item.files[task])?item.files[task]:fileModeOptions[rotation(group,taskIndex,fileModeOptions.length)]])) as ParticipantAssignment['files']};
+  }):[];
+  while(participants.length>plannedParticipantCount){
+   const pendingIndex=participants.findLastIndex(person=>person.pending);
+   if(pendingIndex<0)break;
+   participants.splice(pendingIndex,1);
+  }
+  while(participants.length<plannedParticipantCount)participants.push(makePendingSlot(participants.length+1,eligibility));
+  localStorage.setItem(storageKey,JSON.stringify(participants));
+  return participants;
+ }catch{return Array.from({length:plannedParticipantCount},(_,index)=>makePendingSlot(index+1,eligibility))}
 }
-export const assignmentStore=createStore({participants:loadAssignments(),eligibility:loadEligibility()});
+const initialEligibility=loadEligibility();
+export const assignmentStore=createStore({participants:loadAssignments(initialEligibility),eligibility:initialEligibility});
 function save(participants:ParticipantAssignment[]){assignmentStore.set({participants});localStorage.setItem(storageKey,JSON.stringify(participants));}
 function saveEligibility(eligibility:Eligibility){assignmentStore.set({eligibility});localStorage.setItem(eligibilityKey,JSON.stringify(eligibility));}
-const rotation=(group:number,taskIndex:number,count:number)=>(group-1+taskIndex)%count;
 export function setPaperEligibility(task:StudyTaskId,mode:AssignedPaperMode,checked:boolean,lockedIds:Set<string>){
  const state=assignmentStore.get(),current=state.eligibility.paper[task],next=checked?paperModeOptions.map(option=>option.id).filter(id=>id===mode||current.includes(id)):current.filter(id=>id!==mode);
  if(!next.length||!checked&&state.participants.some(person=>lockedIds.has(person.studentId)&&person.paper[task]===mode))return false;
  saveEligibility({...state.eligibility,paper:{...state.eligibility.paper,[task]:next}});
- save(state.participants.map(person=>!lockedIds.has(person.studentId)&&!next.includes(person.paper[task])?{...person,paper:{...person.paper,[task]:next[rotation(person.group,paperTaskIds.indexOf(task),next.length)]}}:person));
+ save(state.participants.map(person=>!lockedIds.has(person.studentId)?{...person,paper:{...person.paper,[task]:next[rotation(person.group,paperTaskIds.indexOf(task),next.length)]}}:person));
  return true;
 }
 export function setFileEligibility(task:FileTaskId,mode:FileLayoutMode,checked:boolean,lockedIds:Set<string>){
  const state=assignmentStore.get(),current=state.eligibility.files[task],next=checked?fileModeOptions.filter(id=>id===mode||current.includes(id)):current.filter(id=>id!==mode);
  if(!next.length||!checked&&state.participants.some(person=>lockedIds.has(person.studentId)&&person.files[task]===mode))return false;
  saveEligibility({...state.eligibility,files:{...state.eligibility.files,[task]:next}});
- save(state.participants.map(person=>!lockedIds.has(person.studentId)&&!next.includes(person.files[task])?{...person,files:{...person.files,[task]:next[rotation(person.group,fileTaskIds.indexOf(task),next.length)]}}:person));
+ save(state.participants.map(person=>!lockedIds.has(person.studentId)?{...person,files:{...person.files,[task]:next[rotation(person.group,fileTaskIds.indexOf(task),next.length)]}}:person));
  return true;
 }
 export function rebuildAssignments(locked:(studentId:string,environment:'paper'|'files',task:string)=>boolean){
@@ -67,7 +88,7 @@ export function rebuildAssignments(locked:(studentId:string,environment:'paper'|
   return {...person,paper,files};
  }));
 }
-export function assignmentFor(studentId:string){return assignmentStore.get().participants.find(item=>item.studentId===studentId.trim());}
+export function assignmentFor(studentId:string){const id=studentId.trim();return id?assignmentStore.get().participants.find(item=>!item.pending&&item.studentId===id):undefined;}
 export function ensureAssignment(studentId:string,name=''){
  const id=studentId.trim();if(!id)return null;
  const existing=assignmentFor(id);
@@ -75,18 +96,19 @@ export function ensureAssignment(studentId:string,name=''){
   if(name.trim()&&name.trim()!==existing.name)save(assignmentStore.get().participants.map(item=>item.studentId===id?{...item,name:name.trim()}:item));
   return assignmentFor(id)!;
  }
- const participants=assignmentStore.get().participants,group=participants.length%paperModeOptions.length;
+ const participants=assignmentStore.get().participants;
+ const pending=participants.find(item=>item.pending);
+ if(pending){save(participants.map(item=>item.slotId===pending.slotId?{...item,studentId:id,name:name.trim(),pending:false}:item));return assignmentFor(id)!;}
+ const group=Math.max(0,...participants.map(item=>item.group))+1;
  const eligibility=assignmentStore.get().eligibility;
- const paper=Object.fromEntries(paperTaskIds.map((task,index)=>{const choices=eligibility.paper[task];return [task,choices[rotation(group+1,index,choices.length)]]})) as Record<StudyTaskId,AssignedPaperMode>;
- const files=Object.fromEntries(fileTaskIds.map((task,index)=>{const choices=eligibility.files[task];return [task,choices[rotation(group+1,index,choices.length)]]})) as Record<FileTaskId,FileLayoutMode>;
- const assignment={studentId:id,name:name.trim(),group:group+1,paper,files,createdAt:new Date().toISOString()};
+ const assignment:ParticipantAssignment={slotId:`slot-${group}`,studentId:id,name:name.trim(),pending:false,group,...assignmentForGroup(group,eligibility),createdAt:new Date().toISOString()};
  save([...participants,assignment]);return assignment;
 }
-export function setPaperAssignment(studentId:string,task:StudyTaskId,mode:AssignedPaperMode){
+export function setPaperAssignment(slotId:string,task:StudyTaskId,mode:AssignedPaperMode){
  if(!assignmentStore.get().eligibility.paper[task].includes(mode))return;
- save(assignmentStore.get().participants.map(item=>item.studentId===studentId?{...item,paper:{...item.paper,[task]:mode}}:item));
+ save(assignmentStore.get().participants.map(item=>item.slotId===slotId?{...item,paper:{...item.paper,[task]:mode}}:item));
 }
-export function setFileAssignment(studentId:string,task:FileTaskId,mode:FileLayoutMode){
+export function setFileAssignment(slotId:string,task:FileTaskId,mode:FileLayoutMode){
  if(!assignmentStore.get().eligibility.files[task].includes(mode))return;
- save(assignmentStore.get().participants.map(item=>item.studentId===studentId?{...item,files:{...item.files,[task]:mode}}:item));
+ save(assignmentStore.get().participants.map(item=>item.slotId===slotId?{...item,files:{...item.files,[task]:mode}}:item));
 }
