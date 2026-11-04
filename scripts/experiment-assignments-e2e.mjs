@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright-core';
+
+const browser=await chromium.launch({channel:process.env.AW_BROWSER??'msedge',headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:1400,height:900}});
+ page.setDefaultTimeout(20000);
+ await page.goto(process.env.AW_URL??'http://127.0.0.1:5178/');
+ await page.locator('.experiment-launcher').click();
+ await page.evaluate(async()=>{
+  const m=await import('/src/study/onboarding.ts');
+  m.registerParticipant('测试被试','001');
+  m.onboarding.set({stage:'ready',records:m.learningQuestions.map(q=>({mode:q.mode,seconds:1,attempts:1,passedAt:new Date().toISOString()}))});
+ });
+ await page.getByRole('button',{name:/实验管理/}).click();
+ assert.equal(await page.locator('.experiment-assignment-table').count(),2);
+ await page.getByRole('textbox',{name:'待测学号'}).fill('002');
+ await page.getByRole('button',{name:'添加待测者'}).click();
+ const initial=await page.locator('.experiment-assignment-table').first().locator('tbody tr').evaluateAll(rows=>rows.map(row=>row.querySelector('select')?.value));
+ assert.deepEqual(initial,['standard','peel']);
+ const paperChoices=page.locator('details[data-eligibility-task="comparison"]');
+ await paperChoices.locator('summary').click();
+ for(const index of [1,2,3,5,6,7])await paperChoices.locator('input').nth(index).uncheck();
+ const fileChoices=page.locator('details[data-eligibility-task="task1"]');
+ await fileChoices.locator('summary').click();
+ await fileChoices.locator('input').first().uncheck();
+ assert.equal(await fileChoices.locator('input').last().isDisabled(),true);
+ await page.getByRole('textbox',{name:'待测学号'}).fill('003');
+ await page.getByRole('button',{name:'添加待测者'}).click();
+ const groups=await page.locator('.experiment-assignment-table').first().locator('tbody tr').evaluateAll(rows=>rows.map(row=>row.querySelector('select')?.value));
+ assert.deepEqual(groups,['standard','capsule','standard']);
+ await page.getByRole('combobox',{name:'001 图文对照交互方式'}).selectOption('capsule');
+ await page.getByRole('button',{name:'返回实验入口'}).click();
+ await page.getByRole('button',{name:/论文阅读/}).click();
+ assert.equal(await page.evaluate(()=>window.__aw.ui.get().studyMode),'capsule');
+ await page.evaluate(async()=>{const m=await import('/src/study/flow.ts');m.beginPaperLevel();m.finishLevel();});
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aquawindow.experiment.records.v1')??'[]'));
+ assert.equal(saved.length,1);assert.equal(saved[0].technique,'capsule');
+ await page.evaluate(async()=>{const m=await import('/src/study/flow.ts');m.experimentFlow.set({view:'hub'});});
+ await page.getByRole('button',{name:/实验管理/}).click();
+ assert.equal(await page.getByRole('combobox',{name:'001 图文对照交互方式'}).isDisabled(),true);
+ await page.locator('details[data-eligibility-task="comparison"] summary').click();
+ assert.equal(await page.locator('details[data-eligibility-task="comparison"] input').nth(4).isDisabled(),true);
+ await page.getByRole('button',{name:'收集数据'}).click();
+ assert.equal(await page.locator('.experiment-data-table').nth(1).locator('tbody tr').count(),1);
+ await page.getByRole('button',{name:'返回实验入口'}).click();
+ await page.getByRole('button',{name:/文件管理/}).click();
+ assert.equal(await page.evaluate(async()=>{const m=await import('/src/study/workspaces.ts');return m.fileTaskStore.get().layoutMode}),'primary-secondary');
+ await page.reload();
+ const persisted=await page.evaluate(async()=>{const m=await import('/src/study/assignments.ts');return {choices:m.assignmentStore.get().eligibility.paper.comparison,assigned:m.assignmentFor('002')?.paper.comparison}});
+ assert.deepEqual(persisted,{choices:['standard','capsule'],assigned:'capsule'});
+ console.log('PASS: eligible-mode filtering, rotated assignments, manual override, locked completed task, assigned modes and persisted data');
+}finally{await browser.close();}

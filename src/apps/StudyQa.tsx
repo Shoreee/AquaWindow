@@ -7,6 +7,7 @@ import {ui} from '../system/ui';
 import {useStore} from '../system/createStore';
 import {credentialState} from '../agent/adaptive/credentials';
 import {askDeepSeek,type ChatMessage} from '../agent/adaptive/chat';
+import {log} from '../study/logger';
 
 type Attachment = { name: string; url: string };
 type Message = { role: 'user' | 'assistant'; text: string; attachments: Attachment[]; sentences?: string[] };
@@ -19,11 +20,11 @@ export function copyStudyQaState(sourceId:string,copyId:string){
 }
 
 export default function StudyQa({windowId,example}:{windowId:string;example?:StudyAnswerExample}){
-  const [messages,setMessages]=useState<Message[]>(()=>qaState.get(windowId)?.messages??(example?[
+  const [messages,setMessages]=useState<Message[]>(()=>qaState.get(windowId)?.messages??(example&&!example.requireImage?[
     {role:'user',text:example.question,attachments:[]},
     {role:'assistant',text:'',sentences:example.sentences,attachments:[]},
   ]:[]));
-  const [draft,setDraft]=useState(()=>qaState.get(windowId)?.draft??'');
+  const [draft,setDraft]=useState(()=>qaState.get(windowId)?.draft??(example?.requireImage?example.question:''));
   const [pending,setPending]=useState<Attachment[]>(()=>qaState.get(windowId)?.pending??[]);
   const [dragging,setDragging]=useState(false);
   const input=useRef<HTMLInputElement>(null);
@@ -63,7 +64,11 @@ export default function StudyQa({windowId,example}:{windowId:string;example?:Stu
     event.preventDefault();
     if(experimentOpen){
       if(!draft.trim()&&!pending.length)return;
-      setMessages(current=>[...current,{role:'user',text:draft.trim(),attachments:[...pending]}]);
+      if(example?.requireImage&&!pending.length){setError('请先附上架构图截图。');return;}
+      const outgoing:Message={role:'user',text:draft.trim()||example?.question||'',attachments:[...pending]};
+      setMessages(current=>[...current,outgoing,...(example?.requireImage?[{role:'assistant' as const,text:'',sentences:example.sentences,attachments:[]}]:[])]);
+      log({src:'study',type:example?.requireImage?'qa.image.send':'qa.send',windowId,data:{task:kernel.get(windowId)?.props.taskId,hasImage:pending.length>0,attachments:pending.length,question:outgoing.text}});
+      setError('');
       setDraft('');setPending([]);return;
     }
     if(!enabled){setError('Agent 权限未开启，请在右下角设置中开启。');return;}

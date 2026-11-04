@@ -12,19 +12,20 @@
   <component name="ChangeListManager">
     <list default="true" id="3789fe63-47b7-4ff7-b260-66ac6da236d5" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/research/paper-reading-experiment-environment.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/research/paper-reading-experiment-environment.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/study-interactions-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/study-interactions-e2e.mjs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/apps/StudyMaterials.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyMaterials.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/field/agentRenderer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/field/agentRenderer.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/shell/AgentScene.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/AgentScene.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/shell/Desktop.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/Desktop.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/shell/SystemChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/SystemChrome.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/shell/Window.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/Window.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/shell/surfaceFusion.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/shell/surfaceFusion.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/study/ScreenshotCapture.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/ScreenshotCapture.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/research/task-06-answer-key.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/research/task-06-answer-key.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/study/attention-zh/attention-arxiv.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/study/attention-zh/attention-arxiv.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/experiment-onboarding-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/experiment-onboarding-e2e.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/Experiment.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/Experiment.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/ExperimentOnboarding.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/ExperimentOnboarding.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/StudyBrowser.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyBrowser.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/StudyPdf.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyPdf.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/StudyQa.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyQa.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/study/TaskCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/TaskCard.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/study/interactionModes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/interactionModes.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/styles/agent.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/styles/agent.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/flow.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/flow.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/onboarding.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/onboarding.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/tasks.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/tasks.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/workspaces.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/workspaces.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/styles/system.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/styles/system.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,7 +72,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "cidr.known.project.marker": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "User-experiment-split",
+    "git-widget-placeholder": "windows",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -99,19 +100,7 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State>
-              <option name="FILTERS">
-                <map>
-                  <entry key="branch">
-                    <value>
-                      <list>
-                        <option value="User-experiment-split" />
-                      </list>
-                    </value>
-                  </entry>
-                </map>
-              </option>
-            </State>
+            <State />
           </value>
         </entry>
       </map>
@@ -126,7 +115,9 @@
     <MESSAGE value="重构学习材料窗口：新增浏览器组件与胶囊缩略图，持久化 PDF 与问答状态。新增五种交互，但是混合在一起的版本" />
     <MESSAGE value="重构学习交互为五种独立模式：顶部菜单显式选择，切换时重置窗口并简化 PDF 为连续滚动渲染" />
     <MESSAGE value="新增截图停靠交互模式：支持框选论文内容生成截图窗口并沿流体轨迹停靠，更新六种模式文档与 E2E 测试" />
-    <option name="LAST_COMMIT_MESSAGE" value="新增截图停靠交互模式：支持框选论文内容生成截图窗口并沿流体轨迹停靠，更新六种模式文档与 E2E 测试" />
+    <MESSAGE value="新增融合后同步滚动交互模式：支持双 PDF 窗口融合后滚动联动，并为笔记与问答区增加图库截图拖入功能" />
+    <MESSAGE value="新增学习入门与练习材料：实验前登记身份、图库截图拖入笔记与问答、融合后同步滚动模式及实验记录导出升级" />
+    <option name="LAST_COMMIT_MESSAGE" value="新增学习入门与练习材料：实验前登记身份、图库截图拖入笔记与问答、融合后同步滚动模式及实验记录导出升级" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

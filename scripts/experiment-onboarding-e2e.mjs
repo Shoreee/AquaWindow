@@ -5,7 +5,7 @@ try{
  const page=await browser.newPage({viewport:{width:1600,height:1000}}),errors=[];
  page.on('pageerror',e=>errors.push(String(e)));
  await page.goto(process.env.AW_URL??'http://127.0.0.1:5174/');
- await page.getByRole('button',{name:'打开实验',exact:true}).click();
+ await page.locator('.experiment-launcher').click();
  const submit=()=>page.getByRole('button',{name:'提交结果',exact:true}).click();
  const ids=()=>page.evaluate(()=>window.__aw.kernel.list().filter(w=>w.props.learning).map(w=>w.id));
  const root=id=>page.locator(`[data-win="${id}"]`);
@@ -33,8 +33,8 @@ try{
  const box=await root(a).locator('.learning-card-code').boundingBox();await page.mouse.move(box.x-8,box.y-8);await page.mouse.down();await page.mouse.move(box.x+box.width+8,box.y+box.height+8,{steps:10});await page.mouse.up();
  await page.evaluate(({a,b})=>{const k=window.__aw.kernel;k.setRect(b,k.get(a).rect);k.focus(b);},{a,b});
  await root(b).locator('.cut-rim').waitFor();await page.getByRole('textbox',{name:'参考编号'}).fill(code2);await submit();await check(4);
- [a]=await ids();await root(a).locator('.aw-title').click({button:'right'});await page.getByRole('menuitem',{name:'收为胶囊…'}).click();await page.getByRole('button',{name:'确认收纳'}).click();
- await page.waitForFunction(id=>window.__aw.kernel.get(id).form==='capsule',a);await page.waitForTimeout(180);await root(a).getByRole('button',{name:'释放胶囊中的全部窗口'}).click();await page.waitForFunction(id=>window.__aw.kernel.get(id).form==='normal'&&!window.__aw.kernel.get(id).props.agentRelease,a);await submit();await check(5);
+ [a,b]=await ids();await root(a).locator('.aw-title').click({button:'right'});await page.getByRole('menuitem',{name:'收为胶囊…'}).click();await page.getByRole('button',{name:'确认收纳'}).click();
+ await page.waitForFunction(id=>window.__aw.kernel.get(id).form==='capsule',a);const cap=await root(a).boundingBox(),target=await root(b).locator('.aw-title').boundingBox();await page.mouse.move(cap.x+cap.width/2,cap.y+cap.height/2);await page.mouse.down();await page.mouse.move(target.x+target.width/2,target.y+target.height/2,{steps:20});await page.mouse.up();await page.waitForFunction(({a,b})=>window.__aw.kernel.get(a)?.props.capsuleDock?.parentId===b,{a,b});await submit();await check(5);
  [a]=await ids();await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] [data-page="3"] canvas`)?.style.visibility==='visible',a);
  await root(a).locator('.aw-title').click();await page.keyboard.press('Control+Shift+s');const content=await root(a).locator('.study-pdf-scroll').boundingBox();await page.mouse.move(content.x+80,content.y+40);await page.mouse.down();await page.mouse.move(content.x+content.width-50,content.y+content.height*.7,{steps:12});await page.mouse.up();
  await page.waitForFunction(id=>!!window.__aw.kernel.get(id)?.group&&!window.__aw.kernel.get(id)?.props.surfaceAnimating,a);await page.getByRole('button',{name:'打开实验',exact:true}).click();await submit();await check(6);

@@ -9,6 +9,7 @@ import {STUDY_TASKS,studyTask,type StudyTaskId} from '../apps/data/studies';
 import {studyTechniques,type StudyInteractionModeId} from './interactionModes';
 import {beginWindowMotion,cancelManualWindowMotion} from '../agent/adaptive/manualMotion';
 import {bounded} from '../agent/adaptive/compiler';
+import {TEST_PARTICIPANT_ID} from './testMode';
 
 export type StudyEnvironment='paper'|'files';
 export type FileTaskId=StudyTaskId;
@@ -139,7 +140,7 @@ export function submitFileDocument(documentId:string){
  const s=fileTaskStore.get(),task=studyTask(s.current),doc=task.documents.find(item=>item.id===documentId);
  if(!s.running||s.submitted||!doc)return;
  const result:FileResult={task:s.current,participant:s.participant.trim()||'P01',mode:s.mode??'none',file:doc.file,correct:documentId===task.targetId,seconds:+((performance.now()-s.startedAt)/1000).toFixed(2),submittedAt:new Date().toISOString(),candidateOrder:[...s.candidateOrder]};
- const results=[...s.results,result];fileTaskStore.set({submitted:true,running:false,results});localStorage.setItem(resultsKey,JSON.stringify(results));
+ const results=s.participant===TEST_PARTICIPANT_ID?s.results:[...s.results,result];fileTaskStore.set({submitted:true,running:false,results});if(s.participant!==TEST_PARTICIPANT_ID)localStorage.setItem(resultsKey,JSON.stringify(results));
  if(s.current==='task3'){
   cancelManualWindowMotion();
   const guide=kernel.list().find(win=>win.appId==='file-study-guide'&&win.props.fileTaskId===s.current);

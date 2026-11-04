@@ -1,9 +1,9 @@
 import { createStore } from '../system/createStore';
 import { kernel } from '../system/kernel';
 
-export type StudyTaskId = 'comparison' | 'screenshot' | 'bilingual' | 'external' | 'citation' | 'answer';
+export type StudyTaskId = 'comparison' | 'screenshot' | 'bilingual' | 'external' | 'answer';
 export type StudyResource = { id: string; title: string; url: string; kind: 'pdf' | 'image' };
-export type StudyAnswerExample = { question: string; sentences: string[] };
+export type StudyAnswerExample = { question: string; sentences: string[]; requireImage?: boolean };
 
 const studyRoot = `${import.meta.env.BASE_URL}study/`;
 const attentionRoot = studyRoot + 'attention-zh/';
@@ -17,6 +17,7 @@ export const studyTasks: Record<StudyTaskId, {
   steps: string[];
   resources: StudyResource[];
   qaExample?: StudyAnswerExample;
+  bilingualPrompt?: {chinese:string;english:string};
 }> = {
   comparison: {
     label: '图文对照',
@@ -44,27 +45,20 @@ export const studyTasks: Record<StudyTaskId, {
     label: '中英对照',
     switchLabel: '中英对照',
     title: '临时中英对照',
-    description: '阅读中文版论文时，遇到表达不清的地方，临时查看英文原文，再回到刚才的中文阅读位置。',
-    steps: ['从文件打开中文版和英文版论文。', '并排查看对应词句，再回到中文阅读位置。', '选择融合后同步滚动时，将两个 PDF 窗口左右融合，滚动左侧即可带动右侧。'],
+    description: '根据下面的中文论述，在英文版论文中找到对应原文，将英文原文复制到答题框。',
+    steps: ['从文件打开中文版和英文版论文，找到对应段落。', '复制对应的英文原文并提交。'],
+    bilingualPrompt:{chinese:'编码器由 N = 6 个相同的层堆栈组成。每一层有两个子层。',english:'The encoder is composed of a stack of N = 6 identical layers. Each layer has two sub-layers.'},
     resources: [
       { id: 'chinese-pdf', title: 'Attention Is All You Need 中文版.pdf', url: attentionRoot + 'Attention-Is-All-You-Need-zh.pdf', kind: 'pdf' },
       { id: 'english-pdf', title: 'Attention Is All You Need 英文版.pdf', url: attentionRoot + 'Attention-Is-All-You-Need-en.pdf', kind: 'pdf' },
     ],
   },
   external: {
-    label: '外部材料',
-    switchLabel: '外部材料',
-    title: '打开外部材料并返回',
-    description: '阅读《Attention Is All You Need》时，在浏览器中查找 Google Research 的 Transformer 介绍文章和该论文的 arXiv 页面，浏览后回到原来的阅读位置。',
-    steps: ['从“文件”打开中文版论文，移动到需要查看外部材料的页面。', '从 Dock 打开“浏览器”，自行搜索 Transformer: A Novel Neural Network Architecture for Language Understanding 和 Attention Is All You Need arXiv。', '通过普通窗口切换回论文，继续刚才的页码和页内位置。'],
-    resources: [attentionZh],
-  },
-  citation: {
-    label: '引用来源',
-    switchLabel: '引用来源',
-    title: '返回引用来源',
-    description: '从《Attention Is All You Need》查找并阅读引用文献，再通过普通窗口切换回主论文原来的位置。',
-    steps: ['从“文件”打开中文版论文，在第 3.2 节找到加性注意力相关的引用 [2]，并在参考文献中确认其篇名。', '在“文件”中自行找到 Neural Machine Translation by Jointly Learning to Align and Translate。', '打开引用论文阅读后，通过普通窗口切换回主论文，继续原来的页码与页内位置。'],
+    label: '外部材料与引用来源',
+    switchLabel: '外部材料与引用来源',
+    title: '打开外部材料并返回引用来源',
+    description: '阅读《Attention Is All You Need》时，查阅它的 arXiv 页面和正文引用的文献，随后回到主论文原来的阅读位置。',
+    steps: ['从“文件”打开中文版论文，记住当前阅读位置。', '从 Dock 打开“浏览器”，自行搜索 Attention Is All You Need arXiv 并查看论文页面。', '回到主论文，在第 3.2 节找到加性注意力的引用 [2]，从参考文献确认完整篇名，再在“文件”中自行找到并打开该文献。', '阅读引用文献后，通过普通窗口切换回主论文原来的页码与页内位置，完成引用与论点连线。'],
     resources: [
       attentionZh,
       { id: 'bahdanau', title: 'Neural Machine Translation by Jointly Learning to Align and Translate.pdf', url: attentionRoot + 'Neural-Machine-Translation-by-Jointly-Learning-to-Align-and-Translate.pdf', kind: 'pdf' },
@@ -73,19 +67,18 @@ export const studyTasks: Record<StudyTaskId, {
   answer: {
     label: '回答核对',
     switchLabel: '回答核对',
-    title: 'AI 回答与原文逐句对应',
-    description: '对照 AI 问答窗口中的实验示例回答，逐句找到《Attention Is All You Need》中文版原文中的依据。',
-    steps: ['从“文件”打开中文版论文，再从 Dock 打开“AI 问答”。', '逐句核对示例回答与论文原文；可在“笔记”记录对应位置或存疑之处。', '在两个窗口之间切换时，保持原文阅读位置。'],
+    title: '图像问答与原文核对',
+    description: '把论文中的 Transformer 架构图作为图片发给 AI 问答，对照图和正文核对实验示例回答。',
+    steps: ['从“文件”打开中文版论文，找到第 3 页图 1 的 Transformer 架构图。', '截图并从“图库”打开，将图片拖入或粘贴到“AI 问答”输入区，附上问题后发送。', '对照架构图与正文，判断示例回答中不准确的论述并提交答案。'],
     resources: [attentionZh],
     // Researcher answer key: docs/research/task-06-answer-key.md.
     qaExample: {
-      question: 'Transformer 的主要结构和注意力机制是怎样设计的？',
+      question: '请根据这张架构图说明编码器、解码器和输出层。',
+      requireImage: true,
       sentences: [
-        'Transformer 的编码器由六个相同的层堆叠而成，每层包含多头自注意力和逐位置前馈网络。',
-        '解码器同样由六层堆叠而成，并额外通过一个注意力子层关注编码器的输出。',
-        '缩放点积注意力先计算查询与键的点积，再除以键的维度平方根并经过 softmax，最后对值加权求和。',
-        '多头注意力把查询、键和值投影到多个空间，并行计算各个注意力头后再拼接和投影。',
-        '由于模型没有循环或卷积结构，编码器和解码器在输入嵌入中加入位置编码来提供序列顺序信息。',
+        '图左侧是编码器，右侧是解码器。',
+        '编码器和解码器都包含带掩码的多头注意力。',
+        'Linear 后接 Softmax，输出词汇概率。',
       ],
     },
   },
