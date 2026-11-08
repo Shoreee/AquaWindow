@@ -139,7 +139,7 @@ try{
   assert.equal(await pdfWindow.locator('.study-pdf-toolbar span').last().textContent(),'120%');
   assert.ok(Math.abs((await pdfScroll.evaluate(element=>element.scrollTop))-beforeScroll)<8,'PDF reading position survives capsule restoration');
   await selectMode('截图停靠','screenshot');
-  const sourceId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'Attention Is All You Need 中文版.pdf',rect:{x:190,y:110,w:660,h:620},props:{resource:'pdf',taskId:'screenshot'}}));
+  const sourceId=await page.evaluate(()=>window.__aw.kernel.open({appId:'study',title:'Attention Is All You Need 中文版.pdf',rect:{x:190,y:110,w:660,h:620},props:{resource:'pdf',taskId:'comparison'}}));
   await page.waitForFunction(id=>document.querySelector(`[data-win="${id}"] .study-pdf-page[data-page="1"] canvas`)?.style.visibility==='visible',sourceId);
   await page.getByRole('button',{name:'系统控制',exact:true}).click();
   await page.getByRole('dialog',{name:'系统控制面板'}).getByRole('button',{name:/^截图/}).click();

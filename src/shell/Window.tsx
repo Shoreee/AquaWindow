@@ -85,8 +85,8 @@ function WindowImpl({ win, visual, focused, tech, xray, active, alert }: Props) 
   const studyMode=useStore(ui,s=>s.studyMode);
   const studyDesktop=useStore(ui,s=>s.experimentOpen);
   const canCapsule=!studyDesktop||studyMode==='capsule';
-  const canFusion=!studyDesktop||studyMode==='fusion';
-  const canShake=!studyDesktop||studyMode==='fusion';
+  const canFusion=!studyDesktop||(studyMode==='fusion'||studyMode==='sync-scroll');
+  const canShake=!studyDesktop||(studyMode==='fusion'||studyMode==='sync-scroll');
   const def = APPS[win.appId];
   const [menuAt,setMenuAt]=useState<{x:number;y:number}|null>(null);
   const closeMenu=useCallback(()=>setMenuAt(null),[]);

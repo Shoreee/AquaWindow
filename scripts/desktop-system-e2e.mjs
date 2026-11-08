@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {admitTestParticipant} from './experiment-fixture.mjs';
 import {chromium} from 'playwright-core';
 const browser=await chromium.launch({channel:process.env.AW_BROWSER??'chrome',headless:true});
 try{
@@ -77,6 +78,7 @@ try{
  const before=await page.evaluate(()=>window.__aw.kernel.getState().order);
  await page.getByRole('button',{name:'系统控制',exact:true}).click();await page.getByRole('dialog',{name:'系统控制面板'}).getByRole('button',{name:'所有窗口'}).waitFor();await page.getByRole('button',{name:'系统控制',exact:true}).click();
  await page.getByRole('button',{name:'打开实验',exact:true}).click();
+ await admitTestParticipant(page);
  await page.getByRole('heading',{name:'选择实验',exact:true}).waitFor();assert.equal(await page.locator('.study-mode-trigger').count(),0);
  await page.locator('.experiment-worlds').getByRole('button',{name:/论文阅读/}).click();
  await page.getByText('第 1 / 6 题',{exact:true}).waitFor();await page.getByRole('combobox',{name:'交互方式'}).selectOption('peel');

@@ -7,7 +7,7 @@
   <a href="https://github.com/Shoreee/AquaWindow/actions/workflows/pages.yml"><img src="https://github.com/Shoreee/AquaWindow/actions/workflows/pages.yml/badge.svg" alt="构建与部署状态"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-586B7B?style=flat-square" alt="MIT 许可证"></a>
 </p>
-<p align="center"><a href="https://shoreee.github.io/AquaWindow/">体验在线原型</a> · <a href="#交互指南">交互指南</a> · <a href="#本地运行">本地运行</a></p>
+<p align="center"><a href="https://themanfromyiyang.github.io/AquaWindow/">体验在线原型</a> · <a href="#交互指南">交互指南</a> · <a href="#本地运行">本地运行</a></p>
 
 AquaWindow 探索 AI 协作者如何通过窗口边界融入桌面。窗口被视作能够退让、透出内容、携带上下文、相互连接与拆分的表面。柔软的膜、流动的白色材质和克制的光学色散，构成这些变化共同的视觉语言。
 

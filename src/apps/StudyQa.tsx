@@ -1,3 +1,4 @@
+import {galleryDropImage} from '../study/gallery';
 import {observeApp} from '../agent/adaptive/observations';
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent } from 'react';
 import type { StudyAnswerExample } from '../study/tasks';
@@ -6,6 +7,7 @@ import {ui} from '../system/ui';
 import {useStore} from '../system/createStore';
 import {credentialState} from '../agent/adaptive/credentials';
 import {askDeepSeek,type ChatMessage} from '../agent/adaptive/chat';
+import {log} from '../study/logger';
 
 type Attachment = { name: string; url: string };
 type Message = { role: 'user' | 'assistant'; text: string; attachments: Attachment[]; sentences?: string[] };
@@ -18,15 +20,16 @@ export function copyStudyQaState(sourceId:string,copyId:string){
 }
 
 export default function StudyQa({windowId,example}:{windowId:string;example?:StudyAnswerExample}){
-  const [messages,setMessages]=useState<Message[]>(()=>qaState.get(windowId)?.messages??(example?[
+  const [messages,setMessages]=useState<Message[]>(()=>qaState.get(windowId)?.messages??(example&&!example.requireImage?[
     {role:'user',text:example.question,attachments:[]},
     {role:'assistant',text:'',sentences:example.sentences,attachments:[]},
   ]:[]));
-  const [draft,setDraft]=useState(()=>qaState.get(windowId)?.draft??'');
+  const [draft,setDraft]=useState(()=>qaState.get(windowId)?.draft??(example?.requireImage?example.question:''));
   const [pending,setPending]=useState<Attachment[]>(()=>qaState.get(windowId)?.pending??[]);
   const [dragging,setDragging]=useState(false);
   const input=useRef<HTMLInputElement>(null);
   const enabled=useStore(ui,s=>s.agentEnabled),credentialRevision=useStore(credentialState,s=>s.revision);
+  const experimentOpen=useStore(ui,s=>s.experimentOpen);
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const request=useRef<AbortController|null>(null);
   useEffect(()=>{if(!enabled){request.current?.abort();setBusy(false);}},[enabled]);
@@ -54,10 +57,20 @@ export default function StudyQa({windowId,example}:{windowId:string;example?:Stu
   const drop=(event:DragEvent<HTMLDivElement>)=>{
     event.preventDefault();
     setDragging(false);
-    attach(event.dataTransfer.files);
+    const image=galleryDropImage(event.dataTransfer);
+    if(image)setPending(current=>[...current,image]);else attach(event.dataTransfer.files);
   };
   const send=async(event:FormEvent)=>{
     event.preventDefault();
+    if(experimentOpen){
+      if(!draft.trim()&&!pending.length)return;
+      if(example?.requireImage&&!pending.length){setError('请先附上架构图截图。');return;}
+      const outgoing:Message={role:'user',text:draft.trim()||example?.question||'',attachments:[...pending]};
+      setMessages(current=>[...current,outgoing,...(example?.requireImage?[{role:'assistant' as const,text:'',sentences:example.sentences,attachments:[]}]:[])]);
+      log({src:'study',type:example?.requireImage?'qa.image.send':'qa.send',windowId,data:{task:kernel.get(windowId)?.props.taskId,hasImage:pending.length>0,attachments:pending.length,question:outgoing.text}});
+      setError('');
+      setDraft('');setPending([]);return;
+    }
     if(!enabled){setError('Agent 权限未开启，请在右下角设置中开启。');return;}
     if(busy||(!draft.trim()&&!pending.length))return;
     const outgoing:Message={role:'user',text:draft.trim(),attachments:[...pending]};
@@ -82,14 +95,14 @@ export default function StudyQa({windowId,example}:{windowId:string;example?:Stu
 
   return <div className={`study-qa${dragging?' dragging':''}`}
     onPaste={paste}
-    onDragOver={event=>{if(event.dataTransfer.types.includes('Files')){event.preventDefault();setDragging(true);}}}
+    onDragOver={event=>{if(event.dataTransfer.types.some(type=>type==='Files'||type==='application/x-aquawindow-capture')){event.preventDefault();setDragging(true);}}}
     onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setDragging(false);}}
     onDrop={drop}>
     <div className="study-qa-messages">
       {messages.length===0&&<div className="study-qa-intro">
         <span className="study-qa-symbol" aria-hidden="true">✦</span>
         <h2>AI 问答</h2>
-        <p>向 DeepSeek 提问，或附上截图。</p>
+        <p>{experimentOpen?'可将截图粘贴或拖入输入区，按当前任务说明操作。':'向 DeepSeek 提问，或附上截图。'}</p>
 
       </div>}
       {messages.map((message,index)=><div className={`study-qa-message ${message.role}`} key={index}>
@@ -100,7 +113,7 @@ export default function StudyQa({windowId,example}:{windowId:string;example?:Stu
       </div>)}
     </div>
     {busy&&<p className="qa-status" role="status">正在回答…</p>}
-    {(!enabled||error)&&<p className="qa-error" role="alert">{!enabled?'Agent 权限未开启，请在右下角设置中开启。':error}</p>}
+    {((!enabled&&!experimentOpen)||error)&&<p className="qa-error" role="alert">{!enabled?'Agent 权限未开启，请在右下角设置中开启。':error}</p>}
     <form className="study-qa-composer" onSubmit={send}>
       {pending.length>0&&<div className="study-qa-pending">{pending.map(image=><button key={image.url} type="button" title={`移除 ${image.name}`} onClick={()=>setPending(current=>current.filter(item=>item.url!==image.url))}><img src={image.url} alt={image.name}/><span aria-hidden="true">×</span></button>)}</div>}
       <div className="study-qa-input-row">

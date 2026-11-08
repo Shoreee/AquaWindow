@@ -1358,3 +1358,9 @@
 .session-capsule .docked-capsule{width:55px;height:19px;}.session-capsule .docked-capsule span{font-size:8px;line-height:17px;}
 .aw-win .agent-fluid-material{inset:-32px;}
 .session-capsule.capsule-busy>.window-docked-capsules,.session-capsule.capsule-receiving>.window-docked-capsules{pointer-events:none;}
+
+.study-notes textarea { display: block; width: 100%; min-height: 120px; resize: vertical; border: 0; background: transparent; color: inherit; font: inherit; outline: none; }
+.study-notes figure { margin: 16px 0; }
+.study-notes figure img { display: block; max-width: 100%; height: auto; }
+.study-notes figure button { margin-top: 6px; padding: 5px 8px; border-radius: 6px; background: #edf1f7; color: #536178; }
+.experiment-profile{display:grid;gap:18px;margin-top:24px}.experiment-profile label{display:grid;gap:7px}.experiment-profile input{box-sizing:border-box;width:100%;padding:10px 12px;border:1px solid #d3dce4;border-radius:8px;background:#ffffffc0;color:#344454;font:inherit}.learning-materials{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0}.learning-materials button{padding:12px;border:1px solid #dce3e8;border-radius:9px;background:#ffffffa0;color:#3c5260}.experiment-primary:disabled{opacity:.45;cursor:default}.learning-card{height:100%;box-sizing:border-box;position:relative;padding:24px;background:#f7f8fa;color:#334655}.learning-card-code{position:absolute;right:30px;bottom:36px;display:grid;gap:8px}.learning-card-code strong{font-size:32px;letter-spacing:5px}.learning-card-code span{font-size:12px;color:#647481}

@@ -51,6 +51,12 @@ export default function StudyBrowser({windowId}:{windowId:string}){
   const search=(event:FormEvent)=>{
     event.preventDefault();
     detach.current?.();setForward(null);
+    if(/^(?:https?:\/\/)?(?:www\.)?arxiv\.org\/(?:abs|pdf)\/1706\.03762(?:v\d+)?(?:\.pdf)?\/?(?:[?#].*)?$/i.test(draft.trim())){
+      const page=pages.find(item=>item.id==='arxiv')!;
+      setQuery('Attention Is All You Need arXiv');setSelected(page);
+      browserState.set(windowId,{draft:draft.trim(),query:'Attention Is All You Need arXiv',selectedId:page.id,scroll:0});
+      return;
+    }
     setQuery(draft.trim());
     setSelected(null);
     browserState.set(windowId,{draft,query:draft.trim(),selectedId:null,scroll:0});

@@ -1,6 +1,7 @@
+import {syncFusedPdfScroll} from '../study/syncScroll';
 import {observeApp} from '../agent/adaptive/observations';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {getDocument,GlobalWorkerOptions,type PDFDocumentProxy} from 'pdfjs-dist';
+import {getDocument,GlobalWorkerOptions,TextLayer,type PDFDocumentProxy} from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import {kernel} from '../system/kernel';
 import {useStore} from '../system/createStore';
@@ -22,8 +23,8 @@ const loadPdf=(url:string)=>{
   return promise;
 };
 
-function PdfPage({pdf,number,width,zoom,ratio,scrollRoot}:{pdf:PDFDocumentProxy;number:number;width:number;zoom:number;ratio:number;scrollRoot:{current:HTMLDivElement|null}}){
-  const holder=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null);
+function PdfPage({pdf,number,width,zoom,ratio,scrollRoot,selectable}:{pdf:PDFDocumentProxy;number:number;width:number;zoom:number;ratio:number;scrollRoot:{current:HTMLDivElement|null};selectable:boolean}){
+  const holder=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),textHost=useRef<HTMLDivElement>(null);
   const [visible,setVisible]=useState(false),[rendered,setRendered]=useState(false);
   useEffect(()=>{
     const element=holder.current,root=scrollRoot.current;if(!element||!root)return;
@@ -33,7 +34,7 @@ function PdfPage({pdf,number,width,zoom,ratio,scrollRoot}:{pdf:PDFDocumentProxy;
   useEffect(()=>{
     if(!visible||!width||!canvas.current)return;
     let cancelled=false;
-    let task:ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']>|null=null;
+    let task:ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']>|null=null,textLayer:TextLayer|null=null;
     setRendered(false);
     void pdf.getPage(number).then(page=>{
       if(cancelled||!canvas.current)return;
@@ -44,11 +45,12 @@ function PdfPage({pdf,number,width,zoom,ratio,scrollRoot}:{pdf:PDFDocumentProxy;
       element.style.width=viewport.width+'px';element.style.height=viewport.height+'px';
       task=page.render({canvas:element,canvasContext:context,viewport,transform:[dpr,0,0,dpr,0,0]});
       void task.promise.then(()=>{if(!cancelled)setRendered(true);}).catch(()=>{});
+      if(selectable&&textHost.current){const host=textHost.current;host.replaceChildren();host.style.setProperty('--total-scale-factor',String(viewport.scale));textLayer=new TextLayer({textContentSource:page.streamTextContent(),container:host,viewport});void textLayer.render().catch(()=>{});}
     }).catch(()=>{});
-    return()=>{cancelled=true;task?.cancel();};
-  },[pdf,number,width,zoom,visible]);
+    return()=>{cancelled=true;task?.cancel();textLayer?.cancel();};
+  },[pdf,number,width,zoom,visible,selectable]);
   return <div className="study-pdf-page" data-page={number} ref={holder} style={{minHeight:Math.round((width-28)*ratio*zoom)+28}}>
-    <canvas ref={canvas} style={{visibility:rendered?'visible':'hidden'}}/>
+    <div className="study-pdf-sheet"><canvas ref={canvas} style={{visibility:rendered?'visible':'hidden'}}/>{selectable&&<div ref={textHost} className="study-pdf-text-layer"/>}</div>
     <small>第 {number} 页</small>
   </div>;
 }
@@ -120,6 +122,7 @@ export default function StudyPdf({windowId,url,title,focused}:{windowId:string;u
     savedScroll.current=host.current.scrollTop*next/zoom;setZoom(next);
   };
   const onScroll=(element:HTMLDivElement)=>{
+    if(!restoringScroll.current)syncFusedPdfScroll(windowId,element);
     const pages=element.querySelectorAll<HTMLElement>('.study-pdf-page');let visible=1;
     const line=element.getBoundingClientRect().top+element.clientHeight*.35;
     for(const page of pages){if(page.getBoundingClientRect().top<=line)visible=Number(page.dataset.page);else break;}
@@ -151,7 +154,7 @@ export default function StudyPdf({windowId,url,title,focused}:{windowId:string;u
     <div className="study-pdf-scroll" ref={host} onScroll={event=>onScroll(event.currentTarget)}>
       {supportsFigurePin&&pdf&&width>0&&<PinnedPdfFigure pdf={pdf} width={width} zoom={zoom} ratio={ratio} offset={pinnedFigure}/>}
       {!error&&!pdf&&<p className="study-pdf-loading">正在打开 {title} · 首次加载可能需要片刻</p>}
-      {error?<p role="alert">PDF 加载失败：{error}</p>:pdf&&ratio>0&&width>0&&Array.from({length:pdf.numPages},(_,index)=><PdfPage key={index+1} pdf={pdf} number={index+1} width={width} zoom={zoom} ratio={ratio} scrollRoot={host}/>)}
+      {error?<p role="alert">PDF 加载失败：{error}</p>:pdf&&ratio>0&&width>0&&Array.from({length:pdf.numPages},(_,index)=><PdfPage key={index+1} pdf={pdf} number={index+1} width={width} zoom={zoom} ratio={ratio} scrollRoot={host} selectable={url.endsWith('-en.pdf')}/>)}
     </div>
   </div>;
 }
