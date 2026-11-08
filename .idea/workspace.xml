@@ -11,20 +11,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3789fe63-47b7-4ff7-b260-66ac6da236d5" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/_2026_10_31_23_07____.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行更新之前于_2026_10_31_23_07_取消提交了更改_[更改]/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/experiment-assignments-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/experiment-assignments-e2e.mjs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/experiment-test-navigation-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/experiment-test-navigation-e2e.mjs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/paper-task-merge-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/paper-task-merge-e2e.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/paper-task-choice-e2e.mjs" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/paper-task-questions-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/paper-task-questions-e2e.mjs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/apps/ExperimentManager.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/ExperimentManager.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/study/TaskCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/TaskCard.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/study/TaskFiveQuiz.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/study/TaskFourMatching.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/study/TaskOneQuiz.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/study/assignments.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/assignments.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/study/flow.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/flow.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/paperQuestions.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/paperQuestions.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/styles/system.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/styles/system.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -35,7 +28,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="User-experiment" />
+        <entry key="$PROJECT_DIR$" value="07790cfd8c64b845a6762a220fa520379a0d71fc" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />

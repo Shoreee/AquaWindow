@@ -7,9 +7,9 @@ import {ui} from '../system/ui';
 import {log,logStore} from './logger';
 import {onboarding,canEnterExperiment,learningHistory} from './onboarding';
 import {assignmentFor,assignmentStore,ensureAssignment,paperSequence,paperSetIndex} from './assignments';
-import {isChoiceQuestion,paperQuestionSet,paperTaskReady,questionPrompt,questionsPerSet} from './paperQuestions';
+import {paperQuestionSet,paperTaskReady,questionsPerSet} from './paperQuestions';
 export const paperLevels=Object.keys(studyTasks) as StudyTaskId[];
-export type ExperimentRecord={participant:string;environment:StudyEnvironment;stage:number;task:string;technique:string|null;seconds:number;selfReported:boolean;events:unknown[];questionSet?:number;questionIndex?:number;prompt?:string;response?:string;correct?:boolean};
+export type ExperimentRecord={participant:string;environment:StudyEnvironment;stage:number;task:string;technique:string|null;seconds:number;selfReported:boolean;events:unknown[];questionSet?:number;questionIndex?:number;prompt?:string;response?:string};
 const recordsKey='aquawindow.experiment.records.v1';
 function savedRecords():ExperimentRecord[]{try{const value=JSON.parse(localStorage.getItem(recordsKey)??'[]');return Array.isArray(value)?value:[]}catch{return []}}
 export const experimentFlow=createStore({view:'hub' as 'hub'|'level'|'complete',levels:{paper:0,files:0},paperRound:0,paperItem:0,stageRunning:false,startedAt:0,logStart:0,records:savedRecords()});
@@ -19,8 +19,7 @@ export function currentPaperCondition(){
  if(!task)return null;
  const order=paperSequence(task,group),mode=order[state.paperRound];
  if(!mode)return null;
- const question=paperQuestionSet(task,paperSetIndex(task,mode,group))[state.paperItem];
- return {task,mode,order,round:state.paperRound,item:state.paperItem,setIndex:paperSetIndex(task,mode,group),question,prompt:questionPrompt(question)};
+ return {task,mode,order,round:state.paperRound,item:state.paperItem,setIndex:paperSetIndex(task,mode,group),prompt:paperQuestionSet(task,paperSetIndex(task,mode,group))[state.paperItem]};
 }
 export function activateParticipant(studentId:string){
  const records=experimentFlow.get().records.filter(record=>record.participant===studentId);
@@ -72,9 +71,7 @@ export function finishPaperQuestion(response=''){
  const state=experimentFlow.get(),condition=currentPaperCondition();
  if(ui.get().studyEnvironment!=='paper'||state.view!=='level'||!state.stageRunning||!condition)return;
  if(!onboarding.get().testMode&&!paperTaskReady(condition.task,condition.order.length))return;
- const answer=response.trim();
- if(isChoiceQuestion(condition.question)&&!['A','B','C','D'].includes(answer))return;
- const record:ExperimentRecord={participant:onboarding.get().studentId,environment:'paper',stage:state.levels.paper+1,task:condition.task,technique:condition.mode,questionSet:condition.setIndex,questionIndex:condition.item,prompt:condition.prompt,response:answer,correct:isChoiceQuestion(condition.question)?answer===condition.question.answer:undefined,seconds:+((performance.now()-state.startedAt)/1000).toFixed(2),selfReported:true,events:logStore.get().records.filter(event=>event.t>=state.startedAt)};
+ const record:ExperimentRecord={participant:onboarding.get().studentId,environment:'paper',stage:state.levels.paper+1,task:condition.task,technique:condition.mode,questionSet:condition.setIndex,questionIndex:condition.item,prompt:condition.prompt,response:response.trim(),seconds:+((performance.now()-state.startedAt)/1000).toFixed(2),selfReported:true,events:logStore.get().records.filter(event=>event.t>=state.startedAt)};
  const records=onboarding.get().testMode?state.records:[...state.records,record];
  if(!onboarding.get().testMode)localStorage.setItem(recordsKey,JSON.stringify(records));
  log({src:'study',type:'question.complete',data:{task:condition.task,technique:condition.mode,questionSet:condition.setIndex,questionIndex:condition.item,seconds:record.seconds}});
