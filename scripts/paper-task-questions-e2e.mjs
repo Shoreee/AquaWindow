@@ -3,44 +3,20 @@ import {chromium} from 'playwright-core';
 
 const browser=await chromium.launch({channel:process.env.AW_BROWSER??'msedge',headless:true});
 try{
-  const page=await browser.newPage({viewport:{width:1500,height:950}});
-  page.setDefaultTimeout(30000);
-  await page.goto(process.env.AW_URL??'http://127.0.0.1:5178/');
-  await page.locator('.experiment-launcher').click();
-  await page.getByRole('button',{name:'跳过信息录入（测试）'}).click();
-  await page.getByRole('button',{name:'进入掌握效果测试'}).click();
-  await page.getByRole('button',{name:'跳过掌握测试'}).click();
-  await page.getByRole('button',{name:/论文阅读/}).click();
-
-  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('2');
-  await page.getByRole('button',{name:'开始答题'}).click();
-  assert.equal(await page.getByRole('button',{name:'下一题'}).isDisabled(),true);
-  const board=page.locator('.study-matching-board');
-  for(const [left,right] of [['2','2'],['11','11'],['1','1']]){
-    await board.locator(`[data-side="left"][data-id="${left}"]`).click();
-    await board.locator(`[data-side="right"][data-id="${right}"]`).click();
-  }
-  assert.equal(await board.locator('line').count(),3);
-  await page.getByRole('button',{name:'提交连线'}).click();
-  assert.equal(await page.getByRole('button',{name:'下一题'}).isDisabled(),false);
-
-  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('3');
-  await page.getByRole('button',{name:'开始答题'}).click();
-  assert.equal(await page.getByRole('button',{name:'下一题'}).isDisabled(),true);
-  await page.evaluate(async()=>{const m=await import('/src/apps/StudyMaterials.tsx');m.openStudyResource('qa');});
-  const qa=page.locator('.study-qa');
-  await qa.locator('input[type=file]').setInputFiles({name:'architecture.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/fuoAAAAASUVORK5CYII=','base64')});
-  await qa.getByRole('textbox',{name:'输入问题'}).fill('请解释图中的编码器和解码器。');
-  await qa.getByRole('button',{name:'发送'}).click();
-  await qa.getByText('实验示例回答 · 非实时生成').waitFor();
-  await page.evaluate(async()=>{const {kernel}=await import('/src/system/kernel.ts');kernel.focus('experiment');});
-  await page.getByRole('radio',{name:/编码器和解码器都包含/}).check();
-  await page.getByRole('radio',{name:/只有解码器底部标有/}).check();
-  await page.getByRole('button',{name:'提交答案'}).click();
-  assert.equal(await page.getByRole('button',{name:'下一题'}).isDisabled(),false);
-  const types=await page.evaluate(async()=>{const {logStore}=await import('/src/study/logger.ts');return logStore.get().records.map(record=>record.type);});
-  assert.ok(types.includes('citation.match.submit'));
-  assert.ok(types.includes('qa.image.send'));
-  assert.ok(types.includes('qa.image.quiz.submit'));
-  console.log('PASS: citation matching and image question unlock their paper stages');
+ const page=await browser.newPage({viewport:{width:1500,height:950}});
+ page.setDefaultTimeout(30000);
+ await page.goto(process.env.AW_URL??'http://127.0.0.1:5178/');
+ await page.locator('.experiment-launcher').click();
+ await page.getByRole('button',{name:'实验管理',exact:true}).click();
+ const details=page.locator('details[data-eligibility-task="bilingual"]');await details.locator('summary').click();
+ for(let index=1;index<8;index++)await details.locator('input[type=checkbox]').nth(index).uncheck();
+ const stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('aquawindow.experiment.paper-questions.v2')??'{}').bilingual?.[0]??['','']);
+ assert.deepEqual(await stored(),['','']);
+ await page.getByRole('textbox',{name:'中英对照 题目组 A 题目 1'}).fill('第一道待定题');
+ assert.deepEqual(await stored(),['第一道待定题','']);
+ await page.getByRole('textbox',{name:'中英对照 题目组 A 题目 2'}).fill('第二道待定题');
+ assert.deepEqual(await stored(),['第一道待定题','第二道待定题']);
+ await page.reload();
+ assert.equal(await page.evaluate(async()=>{const m=await import('/src/study/paperQuestions.ts');return m.paperTaskReady('bilingual',1);}),true);
+ console.log('PASS: unprepared paper tasks require both questions per selected form and persist after reload');
 }finally{await browser.close();}

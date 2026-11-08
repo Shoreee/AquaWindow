@@ -11,20 +11,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3789fe63-47b7-4ff7-b260-66ac6da236d5" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/_2026_10_31_23_07____.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行更新之前于_2026_10_31_23_07_取消提交了更改_[更改]/shelved.patch" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/research/task-06-answer-key.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/research/task-06-answer-key.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/study/attention-zh/attention-arxiv.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/study/attention-zh/attention-arxiv.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/experiment-onboarding-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/experiment-onboarding-e2e.mjs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/apps/Experiment.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/Experiment.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/apps/ExperimentOnboarding.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/ExperimentOnboarding.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/apps/StudyBrowser.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyBrowser.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/apps/StudyPdf.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyPdf.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/apps/StudyQa.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/StudyQa.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/experiment-assignments-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/experiment-assignments-e2e.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/experiment-test-navigation-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/experiment-test-navigation-e2e.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/paper-task-merge-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/paper-task-merge-e2e.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/paper-task-questions-e2e.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/paper-task-questions-e2e.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apps/ExperimentManager.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/apps/ExperimentManager.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/study/TaskCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/TaskCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/TaskFiveQuiz.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/TaskFourMatching.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/TaskOneQuiz.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/study/assignments.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/assignments.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/study/flow.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/flow.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/study/onboarding.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/onboarding.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/study/tasks.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/tasks.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/study/workspaces.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/study/workspaces.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/styles/system.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/styles/system.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -62,24 +62,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "cidr.known.project.marker": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "windows",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "pnpm"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;windows&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;
   }
-}]]></component>
+}</component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="默认任务">
       <changelist id="3789fe63-47b7-4ff7-b260-66ac6da236d5" name="更改" comment="" />
@@ -117,7 +117,8 @@
     <MESSAGE value="新增截图停靠交互模式：支持框选论文内容生成截图窗口并沿流体轨迹停靠，更新六种模式文档与 E2E 测试" />
     <MESSAGE value="新增融合后同步滚动交互模式：支持双 PDF 窗口融合后滚动联动，并为笔记与问答区增加图库截图拖入功能" />
     <MESSAGE value="新增学习入门与练习材料：实验前登记身份、图库截图拖入笔记与问答、融合后同步滚动模式及实验记录导出升级" />
-    <option name="LAST_COMMIT_MESSAGE" value="新增学习入门与练习材料：实验前登记身份、图库截图拖入笔记与问答、融合后同步滚动模式及实验记录导出升级" />
+    <MESSAGE value="新增实验席位预分配与待认领机制：按题目数量预置被试席位、支持空位认领与未登记时进入管理" />
+    <option name="LAST_COMMIT_MESSAGE" value="新增实验席位预分配与待认领机制：按题目数量预置被试席位、支持空位认领与未登记时进入管理" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

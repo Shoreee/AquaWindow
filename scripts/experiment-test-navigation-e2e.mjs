@@ -15,7 +15,7 @@ try{
  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('3');
  assert.deepEqual(await page.evaluate(async()=>{const f=await import('/src/study/flow.ts'),t=await import('/src/study/tasks.ts');return [f.experimentFlow.get().levels.paper,t.studyTaskStore.get().current,f.experimentFlow.get().stageRunning]}),[3,'answer',false]);
  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('1');
- await page.getByRole('button',{name:'开始答题'}).click();
+ await page.getByRole('button',{name:'开始本形式'}).click();
  await page.getByRole('combobox',{name:'测试切换题目'}).selectOption('2');
  assert.deepEqual(await page.evaluate(async()=>{const f=await import('/src/study/flow.ts'),t=await import('/src/study/tasks.ts');return [f.experimentFlow.get().levels.paper,t.studyTaskStore.get().current,f.experimentFlow.get().stageRunning]}),[2,'external',false]);
  await page.getByRole('button',{name:'返回实验'}).click();

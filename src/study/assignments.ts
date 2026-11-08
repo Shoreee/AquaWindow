@@ -25,6 +25,15 @@ export const paperModeOptions=[{id:'standard' as const,label:'普通窗口'},...
 const fileModeOptions=['parallel','primary-secondary'] as const;
 export type Eligibility={paper:Record<StudyTaskId,AssignedPaperMode[]>;files:Record<FileTaskId,FileLayoutMode[]>};
 const rotation=(group:number,taskIndex:number,count:number)=>(group-1+taskIndex)%count;
+export function paperSequence(task:StudyTaskId,group:number):AssignedPaperMode[]{
+ const choices=assignmentStore.get().eligibility.paper[task];
+ const start=rotation(group,paperTaskIds.indexOf(task),choices.length);
+ return choices.map((_,index)=>choices[(start+index)%choices.length]);
+}
+export function paperSetIndex(task:StudyTaskId,mode:AssignedPaperMode,group:number):number{
+ const choices=assignmentStore.get().eligibility.paper[task];
+ return (choices.indexOf(mode)+group-1+choices.length)%choices.length;
+}
 function loadEligibility():Eligibility{
  let saved:Partial<Eligibility>={};try{saved=JSON.parse(localStorage.getItem(eligibilityKey)??'{}')}catch{/* Use all available forms. */}
  const paper=Object.fromEntries(paperTaskIds.map(task=>[task,(saved.paper?.[task]??[]).filter(mode=>paperModeOptions.some(option=>option.id===mode))])) as Eligibility['paper'];
